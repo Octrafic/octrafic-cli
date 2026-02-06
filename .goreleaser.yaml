@@ -3,6 +3,12 @@
 
 version: 2
 
+# Skip AUR and Homebrew until repos are configured
+skip:
+  publish:
+    - aur
+    - homebrew
+
 project_name: octrafic
 
 metadata:
