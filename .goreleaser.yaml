@@ -187,7 +187,7 @@ brews:
     repository:
       owner: Octrafic
       name: homebrew-tap
-      token: "{{ .Env.GITHUB_TOKEN }}"
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
 
     # Commit message
     commit_author:
