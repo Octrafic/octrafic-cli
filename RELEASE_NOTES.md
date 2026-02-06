@@ -1,6 +1,4 @@
-# v0.1.0 - Initial Release
-
-AI-powered CLI tool for API testing and exploration.
+# v0.1.0
 
 ## Changes
 
