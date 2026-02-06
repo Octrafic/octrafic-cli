@@ -1,5 +1,5 @@
 {
-  "name": "api-tester-docs",
+  "name": "octrafic-docs",
   "version": "1.0.0",
   "scripts": {
     "docs:dev": "vitepress dev ./ --host 0.0.0.0 --port 3001",
