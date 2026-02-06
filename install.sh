@@ -10,7 +10,7 @@ WHITE='\033[38;2;248;250;252m'
 RED='\033[38;2;251;113;133m'
 NC='\033[0m'
 
-REPO="octrafic/octrafic-cli"
+REPO="Octrafic/octrafic-cli"
 BINARY_NAME="octrafic"
 INSTALL_DIR="/usr/local/bin"
 DRY_RUN=false

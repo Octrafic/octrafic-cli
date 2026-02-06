@@ -1,7 +1,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$Repo = "octrafic/octrafic-cli"
+$Repo = "Octrafic/octrafic-cli"
 $BinaryName = "octrafic.exe"
 $InstallDir = "$env:LOCALAPPDATA\Programs\Octrafic"
 
