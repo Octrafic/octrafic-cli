@@ -1,0 +1,328 @@
+/**
+ * Octrafic VitePress Theme - Colors & Fonts only
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Light mode (default) */
+:root {
+  /* Background colors */
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-soft: #f8fafc;
+  --vp-c-bg-mute: #f1f5f9;
+
+  /* Text colors */
+  --vp-c-text-1: rgba(15, 23, 42, 0.95);
+  --vp-c-text-2: rgba(15, 23, 42, 0.75);
+  --vp-c-text-3: rgba(15, 23, 42, 0.55);
+
+  /* Border colors */
+  --vp-c-border: rgba(59, 130, 246, 0.2);
+  --vp-c-divider: rgba(59, 130, 246, 0.1);
+
+  /* Blue brand colors */
+  --vp-c-brand-1: #1D4ED8;
+  --vp-c-brand-2: #2563EB;
+  --vp-c-brand-3: #3B82F6;
+  --vp-c-brand-soft: rgba(59, 130, 246, 0.1);
+
+  /* Gray colors */
+  --vp-c-gray-1: rgba(15, 23, 42, 0.95);
+  --vp-c-gray-2: rgba(15, 23, 42, 0.75);
+  --vp-c-gray-3: rgba(15, 23, 42, 0.55);
+  --vp-c-gray-soft: rgba(15, 23, 42, 0.06);
+
+  /* Default colors */
+  --vp-c-default-1: var(--vp-c-gray-1);
+  --vp-c-default-2: var(--vp-c-gray-2);
+  --vp-c-default-3: var(--vp-c-gray-3);
+  --vp-c-default-soft: var(--vp-c-gray-soft);
+
+  /* Tip colors */
+  --vp-c-tip-1: var(--vp-c-brand-1);
+  --vp-c-tip-2: var(--vp-c-brand-2);
+  --vp-c-tip-3: var(--vp-c-brand-3);
+  --vp-c-tip-soft: var(--vp-c-brand-soft);
+
+  /* Warning colors */
+  --vp-c-warning-1: #D97706;
+  --vp-c-warning-2: #F59E0B;
+  --vp-c-warning-3: #FBBF24;
+  --vp-c-warning-soft: rgba(251, 191, 36, 0.15);
+
+  /* Danger colors */
+  --vp-c-danger-1: #DC2626;
+  --vp-c-danger-2: #EF4444;
+  --vp-c-danger-3: #F87171;
+  --vp-c-danger-soft: rgba(239, 68, 68, 0.1);
+
+  /* Typography */
+  --vp-font-family-base: 'Inter', sans-serif;
+  --vp-font-family-heading: 'Space Grotesk', sans-serif;
+  --vp-font-family-mono: 'JetBrains Mono', monospace;
+
+  /* Button */
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #ffffff;
+  --vp-button-brand-bg: linear-gradient(135deg, #3B82F6, #2563EB);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-hover-bg: linear-gradient(135deg, #2563EB, #1D4ED8);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: #ffffff;
+  --vp-button-brand-active-bg: linear-gradient(135deg, #1D4ED8, #1E40AF);
+
+  /* Home */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%);
+  --vp-home-hero-image-background-image: none;
+
+  /* Custom blocks */
+  --vp-custom-block-tip-border: transparent;
+  --vp-custom-block-tip-text: var(--vp-c-text-1);
+  --vp-custom-block-tip-bg: var(--vp-c-brand-soft);
+  --vp-custom-block-tip-code-bg: rgba(59, 130, 246, 0.08);
+  --vp-custom-block-warning-border: transparent;
+  --vp-custom-block-warning-text: var(--vp-c-text-1);
+  --vp-custom-block-warning-bg: var(--vp-c-warning-soft);
+  --vp-custom-block-warning-code-bg: rgba(251, 191, 36, 0.08);
+  --vp-custom-block-danger-border: transparent;
+  --vp-custom-block-danger-text: var(--vp-c-text-1);
+  --vp-custom-block-danger-bg: var(--vp-c-danger-soft);
+  --vp-custom-block-danger-code-bg: rgba(239, 68, 68, 0.08);
+}
+
+/* Dark mode */
+.dark {
+  /* Background colors */
+  --vp-c-bg: #121212;
+  --vp-c-bg-soft: #1a1a1a;
+  --vp-c-bg-mute: #1f1f1f;
+
+  /* Text colors */
+  --vp-c-text-1: rgba(255, 255, 255, 0.95);
+  --vp-c-text-2: rgba(255, 255, 255, 0.75);
+  --vp-c-text-3: rgba(255, 255, 255, 0.55);
+
+  /* Border colors */
+  --vp-c-border: rgba(59, 130, 246, 0.2);
+  --vp-c-divider: rgba(59, 130, 246, 0.15);
+
+  /* Blue brand colors */
+  --vp-c-brand-1: #93C5FD;
+  --vp-c-brand-2: #60A5FA;
+  --vp-c-brand-3: #3B82F6;
+  --vp-c-brand-soft: rgba(59, 130, 246, 0.15);
+
+  /* Gray colors */
+  --vp-c-gray-1: rgba(255, 255, 255, 0.95);
+  --vp-c-gray-2: rgba(255, 255, 255, 0.75);
+  --vp-c-gray-3: rgba(255, 255, 255, 0.55);
+  --vp-c-gray-soft: rgba(255, 255, 255, 0.08);
+
+  /* Default colors */
+  --vp-c-default-1: var(--vp-c-gray-1);
+  --vp-c-default-2: var(--vp-c-gray-2);
+  --vp-c-default-3: var(--vp-c-gray-3);
+  --vp-c-default-soft: var(--vp-c-gray-soft);
+
+  /* Tip colors */
+  --vp-c-tip-1: var(--vp-c-brand-1);
+  --vp-c-tip-2: var(--vp-c-brand-2);
+  --vp-c-tip-3: var(--vp-c-brand-3);
+  --vp-c-tip-soft: var(--vp-c-brand-soft);
+
+  /* Warning colors */
+  --vp-c-warning-1: #FCD34D;
+  --vp-c-warning-2: #FBBF24;
+  --vp-c-warning-3: #F59E0B;
+  --vp-c-warning-soft: rgba(251, 191, 36, 0.15);
+
+  /* Danger colors */
+  --vp-c-danger-1: #F87171;
+  --vp-c-danger-2: #EF4444;
+  --vp-c-danger-3: #DC2626;
+  --vp-c-danger-soft: rgba(239, 68, 68, 0.15);
+
+  /* Typography */
+  --vp-font-family-base: 'Inter', sans-serif;
+  --vp-font-family-heading: 'Space Grotesk', sans-serif;
+  --vp-font-family-mono: 'JetBrains Mono', monospace;
+
+  /* Button */
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #ffffff;
+  --vp-button-brand-bg: linear-gradient(135deg, #3B82F6, #2563EB);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-hover-bg: linear-gradient(135deg, #2563EB, #1D4ED8);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: #ffffff;
+  --vp-button-brand-active-bg: linear-gradient(135deg, #1D4ED8, #1E40AF);
+
+  /* Home */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 50%, #93C5FD 100%);
+  --vp-home-hero-image-background-image: none;
+
+  /* Custom blocks */
+  --vp-custom-block-tip-border: transparent;
+  --vp-custom-block-tip-text: var(--vp-c-text-1);
+  --vp-custom-block-tip-bg: var(--vp-c-brand-soft);
+  --vp-custom-block-tip-code-bg: rgba(59, 130, 246, 0.1);
+  --vp-custom-block-warning-border: transparent;
+  --vp-custom-block-warning-text: var(--vp-c-text-1);
+  --vp-custom-block-warning-bg: var(--vp-c-warning-soft);
+  --vp-custom-block-warning-code-bg: rgba(251, 191, 36, 0.1);
+  --vp-custom-block-danger-border: transparent;
+  --vp-custom-block-danger-text: var(--vp-c-text-1);
+  --vp-custom-block-danger-bg: var(--vp-c-danger-soft);
+  --vp-custom-block-danger-code-bg: rgba(239, 68, 68, 0.1);
+}
+
+/* Scrollbar - Light mode */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
+
+/* Scrollbar - Dark mode */
+.dark ::-webkit-scrollbar-track {
+  background: #121212;
+}
+
+/* Apply heading font to all headings */
+h1, h2, h3, h4, h5, h6,
+.VPDoc h1, .VPDoc h2, .VPDoc h3, .VPDoc h4, .VPDoc h5, .VPDoc h6,
+.vp-doc h1, .vp-doc h2, .vp-doc h3, .vp-doc h4, .vp-doc h5, .vp-doc h6 {
+  font-family: var(--vp-font-family-heading) !important;
+}
+
+/* Custom Logo and Title */
+.VPNavBarTitle {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+}
+
+.VPNavBarTitle .logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.VPNavBarTitle .title {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+  font-family: var(--vp-font-family-heading);
+}
+
+/* Home page */
+.home-wrapper {
+  position: relative;
+  min-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+
+.home-hero {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  padding: 36px 48px 0;
+  position: relative;
+  z-index: 1;
+}
+
+.home-hero-inner {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.home-label {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--vp-c-brand-1);
+  margin: 0 0 12px;
+}
+
+.home-tagline {
+  font-size: 16px;
+  color: var(--vp-c-text-2);
+  margin: 0 0 40px;
+  max-width: 520px;
+  line-height: 1.7;
+}
+
+.home-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 520px;
+}
+
+.home-card {
+  flex: 1;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 28px 24px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-border);
+  border-radius: 14px;
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+
+.home-card:hover {
+  border-color: var(--vp-c-brand-1);
+  background: var(--vp-c-brand-soft);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+  transform: translateY(-3px);
+}
+
+.home-card-title {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--vp-font-family-heading);
+  color: var(--vp-c-text-1);
+  margin: 0 0 8px;
+}
+
+.home-card-desc {
+  font-size: 14px;
+  color: var(--vp-c-text-2);
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .home-hero {
+    padding: 36px 24px 0;
+  }
+
+  .home-tagline {
+    font-size: 15px;
+    margin-bottom: 32px;
+  }
+
+  .home-card {
+    min-height: 120px;
+  }
+}
+
