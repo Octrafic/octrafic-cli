@@ -80,14 +80,14 @@ detect_arch() {
 
 get_latest_version() {
     echo "Fetching latest version..."
-    VERSION=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/' | tr -d '[:space:]')
+    RELEASE_VERSION=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/' | tr -d '[:space:]')
 
-    if [ -z "$VERSION" ]; then
+    if [ -z "$RELEASE_VERSION" ]; then
         echo -e "${RED}Error: Could not determine latest version${NC}"
         exit 1
     fi
 
-    echo -e "${SKY_BLUE}Latest version: v$VERSION${NC}"
+    echo -e "${SKY_BLUE}Latest version: v$RELEASE_VERSION${NC}"
 }
 
 detect_distro() {
@@ -108,7 +108,7 @@ install_linux_package() {
     case "$DISTRO" in
         ubuntu|debian|pop|linuxmint)
             echo -e "${YELLOW}Detected Debian-based distribution${NC}"
-            PACKAGE_URL="https://github.com/$REPO/releases/download/v$VERSION/${BINARY_NAME}_${VERSION}_${OS}_${ARCH}.deb"
+            PACKAGE_URL="https://github.com/$REPO/releases/download/v$RELEASE_VERSION/${BINARY_NAME}_${RELEASE_VERSION}_${OS}_${ARCH}.deb"
             TEMP_DEB="/tmp/${BINARY_NAME}.deb"
 
             echo "Downloading .deb package..."
@@ -122,7 +122,7 @@ install_linux_package() {
 
         fedora|rhel|centos|rocky|almalinux)
             echo -e "${YELLOW}Detected RedHat-based distribution${NC}"
-            PACKAGE_URL="https://github.com/$REPO/releases/download/v$VERSION/${BINARY_NAME}_${VERSION}_${OS}_${ARCH}.rpm"
+            PACKAGE_URL="https://github.com/$REPO/releases/download/v$RELEASE_VERSION/${BINARY_NAME}_${RELEASE_VERSION}_${OS}_${ARCH}.rpm"
             TEMP_RPM="/tmp/${BINARY_NAME}.rpm"
 
             echo "Downloading .rpm package..."
@@ -172,7 +172,7 @@ install_binary() {
         esac
     fi
 
-    DOWNLOAD_URL="https://github.com/$REPO/releases/download/v$VERSION/$ARCHIVE_NAME"
+    DOWNLOAD_URL="https://github.com/$REPO/releases/download/v$RELEASE_VERSION/$ARCHIVE_NAME"
     TEMP_DIR=$(mktemp -d)
     TEMP_ARCHIVE="$TEMP_DIR/${BINARY_NAME}.${ARCHIVE_EXT}"
 
@@ -195,7 +195,7 @@ main() {
     get_latest_version
 
     echo
-    echo "Installing Octrafic v$VERSION for $OS/$ARCH..."
+    echo "Installing Octrafic v$RELEASE_VERSION for $OS/$ARCH..."
     echo
 
     if [ "$OS" = "linux" ]; then
