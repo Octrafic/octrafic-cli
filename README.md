@@ -44,7 +44,7 @@ On first launch, configure your AI provider:
 **Supported providers:**
 - **Claude (Anthropic)** - Sonnet 4.5, Opus 4.6, Haiku 4.5 - Get API key: [console.anthropic.com](https://console.anthropic.com)
 - **OpenRouter** - Claude, GPT-5.2, Gemini, and more - Get API key: [openrouter.ai/keys](https://openrouter.ai/keys)
-- **OpenAI** - GPT-5.2, GPT-4, GPT-4 Turbo - Get API key: [platform.openai.com](https://platform.openai.com)
+- **OpenAI** - GPT-5.2 and other models - Get API key: [platform.openai.com](https://platform.openai.com)
 
 Configuration is saved in `~/.octrafic/config.json`
 
