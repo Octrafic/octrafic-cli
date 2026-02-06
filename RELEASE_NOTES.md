@@ -1,44 +1,14 @@
-# Release Notes v0.1.0
+# v0.1.0 - Initial Release
 
-Initial release of Octrafic CLI - AI-powered API testing tool.
+AI-powered CLI tool for API testing and exploration.
 
-## Features
+## Changes
 
-- Natural language API testing with AI
-- Multi-provider support: Claude (Anthropic), OpenRouter, OpenAI
-- Format support: OpenAPI/Swagger, Postman Collections, GraphQL, Markdown
-- Auto-conversion of various API formats to OpenAPI
-- Interactive TUI with project management
-- Authentication support: Bearer, API Key, Basic Auth
-- Cross-platform: Linux, macOS, Windows (amd64, arm64, armv7)
-
-## Installation
-
-**Quick install:**
-```bash
-# Linux & macOS
-curl -fsSL https://octrafic.com/install.sh | bash
-
-# Windows
-iex (iwr -useb https://octrafic.com/install.ps1)
-
-# macOS (Homebrew)
-brew install octrafic/tap/octrafic
-
-# Arch Linux
-yay -S octrafic-bin
-```
-
-**Package managers:**
-- DEB packages for Debian/Ubuntu
-- RPM packages for Fedora/RHEL/CentOS
-- Homebrew for macOS
-- AUR for Arch Linux
-
-## What's New
-
-Initial release with core functionality:
-- AI-powered test generation and execution
-- Interactive project wizard with auth configuration
-- Multi-architecture support
-- Automated release pipeline with GoReleaser
+- Natural language API testing with AI (Claude, OpenRouter, OpenAI)
+- Interactive TUI with project management wizard
+- Auth configuration in project wizard (Bearer, API Key, Basic)
+- Format support: OpenAPI/Swagger, Postman, GraphQL, Markdown
+- Auto-conversion of API formats to OpenAPI
+- Multi-platform support: Linux, macOS, Windows (amd64, arm64, armv7)
+- Package managers: Homebrew, DEB, RPM, AUR
+- Branded install scripts (install.sh, install.ps1)
