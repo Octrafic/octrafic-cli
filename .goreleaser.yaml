@@ -3,11 +3,6 @@
 
 version: 2
 
-# Skip AUR until manual setup is complete
-skip:
-  publish:
-    - aur
-
 project_name: octrafic
 
 metadata:
