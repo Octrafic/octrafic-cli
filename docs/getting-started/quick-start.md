@@ -21,7 +21,7 @@ iex (irm https://octrafic.com/install.ps1)
 ### Using Go
 
 ```bash
-go install github.com/yourusername/octrafic@latest
+go install github.com/Octrafic/octrafic-cli@latest
 ```
 
 ## Step 2: First launch setup
