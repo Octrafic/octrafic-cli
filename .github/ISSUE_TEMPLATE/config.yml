@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussions
+    url: https://github.com/Octrafic/octrafic-cli/discussions
+    about: Ask questions and share ideas in Discussions instead of opening an issue.
