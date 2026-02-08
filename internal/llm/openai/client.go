@@ -254,7 +254,7 @@ func (c *Client) chatStream(messages []Message, tools []Tool, thinkingEnabled bo
 	if err != nil {
 		return nil, nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -344,7 +344,7 @@ func (c *Client) chatStream(messages []Message, tools []Tool, thinkingEnabled bo
 
 	for _, pt := range pendingTools {
 		var args map[string]interface{}
-		json.Unmarshal([]byte(pt.args.String()), &args)
+		_ = json.Unmarshal([]byte(pt.args.String()), &args)
 		toolCalls = append(toolCalls, FunctionCallData{ID: pt.id, Name: pt.name, Args: args})
 	}
 
@@ -369,7 +369,7 @@ func (c *Client) chat(messages []Message, tools []Tool) (*ChatResponse, *TokenUs
 	c.setHeaders(req)
 	resp, err := c.httpClient.Do(req)
 	if err != nil { return nil, nil, err }
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
@@ -396,7 +396,7 @@ func (c *Client) chat(messages []Message, tools []Tool) (*ChatResponse, *TokenUs
 	var toolCalls []FunctionCallData
 	for _, tc := range msg.Get("tool_calls").Array() {
 		var args map[string]interface{}
-		json.Unmarshal([]byte(tc.Get("function.arguments").String()), &args)
+		_ = json.Unmarshal([]byte(tc.Get("function.arguments").String()), &args)
 		toolCalls = append(toolCalls, FunctionCallData{ID: tc.Get("id").String(), Name: tc.Get("function.name").String(), Args: args})
 	}
 

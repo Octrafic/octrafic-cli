@@ -86,9 +86,7 @@ func LoadProjectContext(projectID string) (*ProjectContext, error) {
 
 	// Update last accessed time
 	project.LastAccessedAt = time.Now()
-	if err := SaveProject(project); err != nil {
-		// Non-fatal - just continue
-	}
+	_ = SaveProject(project) // Non-fatal - just continue
 
 	return NewProjectContext(project)
 }
@@ -240,7 +238,7 @@ func ComputeFileHash(filePath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {

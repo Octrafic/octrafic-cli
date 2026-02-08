@@ -182,13 +182,14 @@ func handleWizardKeys(m TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyUp:
-		if m.wizardState.Step == StepSelectType {
+		switch m.wizardState.Step {
+		case StepSelectType:
 			// Navigate menu up
 			m.wizardState.SelectedIndex--
 			if m.wizardState.SelectedIndex < 0 {
 				m.wizardState.SelectedIndex = len(m.wizardState.MenuItems) - 1
 			}
-		} else if m.wizardState.Step == StepFillForm {
+		case StepFillForm:
 			// Navigate form fields up
 			m.wizardState.FocusedField--
 			if m.wizardState.FocusedField < 0 {
@@ -198,13 +199,14 @@ func handleWizardKeys(m TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyDown:
-		if m.wizardState.Step == StepSelectType {
+		switch m.wizardState.Step {
+		case StepSelectType:
 			// Navigate menu down
 			m.wizardState.SelectedIndex++
 			if m.wizardState.SelectedIndex >= len(m.wizardState.MenuItems) {
 				m.wizardState.SelectedIndex = 0
 			}
-		} else if m.wizardState.Step == StepFillForm {
+		case StepFillForm:
 			// Navigate form fields down
 			m.wizardState.FocusedField++
 			if m.wizardState.FocusedField >= len(m.wizardState.FormFields) {
@@ -244,7 +246,8 @@ func handleWizardKeys(m TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyEnter:
-		if m.wizardState.Step == StepSelectType {
+		switch m.wizardState.Step {
+		case StepSelectType:
 			// User selected an auth type
 			selectedItem := m.wizardState.MenuItems[m.wizardState.SelectedIndex]
 
@@ -280,7 +283,7 @@ func handleWizardKeys(m TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.wizardState.FocusedField = 0
 			return m, nil
 
-		} else if m.wizardState.Step == StepFillForm {
+		case StepFillForm:
 			// Check if user is on a regular field (not radio) and wants to submit
 			field := &m.wizardState.FormFields[m.wizardState.FocusedField]
 			if !field.IsRadio {

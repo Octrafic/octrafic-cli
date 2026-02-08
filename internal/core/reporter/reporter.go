@@ -207,13 +207,13 @@ func GeneratePDF(markdownContent string, outputPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	if _, err := tmpFile.WriteString(fullHTML); err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return "", fmt.Errorf("failed to write HTML: %w", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Convert HTML to PDF using weasyprint
 	cmd := exec.Command("weasyprint", tmpFile.Name(), absPath)

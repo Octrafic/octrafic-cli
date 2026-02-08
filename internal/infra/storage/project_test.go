@@ -86,10 +86,10 @@ func TestProjectManagement(t *testing.T) {
 
 	// Cleanup
 	tempPath, _ := GetProjectPathByType(tempProject.ID, true)
-	os.RemoveAll(tempPath)
+	_ = os.RemoveAll(tempPath)
 
 	permPath, _ := GetProjectPathByType(permanentProject.ID, false)
-	os.RemoveAll(permPath)
+	_ = os.RemoveAll(permPath)
 }
 
 func TestGetProjectPathByType(t *testing.T) {
@@ -114,8 +114,8 @@ func TestGetProjectPathByType(t *testing.T) {
 	}
 
 	// Cleanup
-	os.RemoveAll(permPath)
-	os.RemoveAll(tempPath)
+	_ = os.RemoveAll(permPath)
+	_ = os.RemoveAll(tempPath)
 }
 
 func TestCleanupTempProjects(t *testing.T) {
@@ -138,8 +138,8 @@ func TestCleanupTempProjects(t *testing.T) {
 		UpdatedAt:   time.Now(),
 	}
 
-	SaveProject(tempProject1)
-	SaveProject(tempProject2)
+	_ = SaveProject(tempProject1)
+	_ = SaveProject(tempProject2)
 
 	// Clean up
 	err := CleanupTempProjects()

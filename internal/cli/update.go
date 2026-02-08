@@ -481,17 +481,17 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		return m, nil, false
 	}
 
-	switch {
-	case userInput == "/think":
+	switch userInput {
+	case "/think":
 		m.thinkingEnabled = !m.thinkingEnabled
 		return m, nil, true
 
-	case userInput == "/clear":
+	case "/clear":
 		m.conversationHistory = []agent.ChatMessage{}
 		m.recreateHeader()
 		return m, nil, true
 
-	case userInput == "/help":
+	case "/help":
 		m.addAgentMessage(m.agentStyle.Render("Available commands:"))
 		for _, cmd := range availableCommands {
 			m.addMessage(lipgloss.NewStyle().Foreground(Theme.Primary).Render(cmd.Name) + " - " + cmd.Description)
@@ -499,7 +499,7 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		m.addMessage("")
 		return m, nil, true
 
-	case userInput == "/logout":
+	case "/logout":
 		if err := storage.ClearSession(); err != nil {
 			m.addAgentMessage(m.errorStyle.Render("Failed to logout: " + err.Error()))
 		} else {
@@ -509,15 +509,15 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		m.addMessage("")
 		return m, nil, true
 
-	case userInput == "/exit":
+	case "/exit":
 		return m, tea.Quit, true
 
-	case userInput == "/auth":
+	case "/auth":
 		m.wizardState = NewAuthWizard()
 		m.agentState = StateWizard
 		return m, nil, true
 
-	case userInput == "/release-notes":
+	case "/release-notes":
 		m.addAgentMessage(m.subtleStyle.Render("Fetching release notes..."))
 		m.addMessage("")
 		return m, func() tea.Msg {
@@ -525,7 +525,7 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 			return releaseNotesMsg{notes: notes, url: url, err: err}
 		}, true
 
-	case userInput == "/info":
+	case "/info":
 		if m.currentProject == nil {
 			m.addAgentMessage(m.subtleStyle.Render("No active project"))
 			m.addMessage("")
@@ -735,14 +735,15 @@ func handleConfirmationState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd
 		}
 		return m, nil
 	case tea.KeyEnter:
-		if m.confirmationChoice == 0 {
+		switch m.confirmationChoice {
+		case 0:
 			m.currentToolCall = m.pendingToolCall
 			m.pendingToolCall = nil
 			m.agentState = StateUsingTool
 			m.animationFrame = 0
 			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.PrimaryDark)
 			return m, tea.Batch(animationTick(), m.executeTool(*m.currentToolCall))
-		} else if m.confirmationChoice == 1 {
+		case 1:
 			m.pendingToolCall = nil
 			m.agentState = StateIdle
 			if m.lastMessageRole != "assistant" {
@@ -752,7 +753,7 @@ func handleConfirmationState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd
 			m.addMessage("")
 			m.lastMessageRole = "assistant"
 			return m, nil
-		} else {
+		default:
 			isExecuteTest := m.pendingToolCall != nil && strings.HasPrefix(m.pendingToolCall.Name, "ExecuteTest")
 			m.pendingToolCall = nil
 

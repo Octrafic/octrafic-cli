@@ -259,7 +259,7 @@ func (c *Client) Chat(messages []Message, thinkingEnabled bool, tools []Tool) (s
 	message, err := c.client.Messages.New(c.ctx, params)
 	if err != nil {
 		logger.Error("Anthropic error", logger.Err(err))
-		return "", "", []FunctionCallResult{}, nil, fmt.Errorf("Anthropic error: %w", err)
+		return "", "", []FunctionCallResult{}, nil, fmt.Errorf("anthropic error: %w", err)
 	}
 
 	// Extract response and tool calls
@@ -427,7 +427,7 @@ func (c *Client) ChatStream(messages []Message, thinkingEnabled bool, tools []To
 			)
 		}
 
-		accumulatedMessage.Accumulate(event)
+		_ = accumulatedMessage.Accumulate(event)
 
 		switch eventVariant := event.AsAny().(type) {
 		case anthropic.ContentBlockDeltaEvent:

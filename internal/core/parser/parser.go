@@ -346,9 +346,10 @@ func parseGraphQL(content string) (*Specification, error) {
 		}
 
 		for _, c := range trimmed {
-			if c == '{' {
+			switch c {
+			case '{':
 				braceDepth++
-			} else if c == '}' {
+			case '}':
 				braceDepth--
 				if braceDepth <= 0 {
 					inType = false

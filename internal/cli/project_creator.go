@@ -438,13 +438,14 @@ func (m ProjectCreatorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Handle auth menu navigation
 		case "up":
-			if m.step == ProjectStepAuthType {
+			switch m.step {
+			case ProjectStepAuthType:
 				m.authMenuIndex--
 				if m.authMenuIndex < 0 {
 					m.authMenuIndex = len(m.authMenuItems) - 1
 				}
 				return m, nil
-			} else if m.step == ProjectStepAuthDetails {
+			case ProjectStepAuthDetails:
 				m.authFocusedField--
 				if m.authFocusedField < 0 {
 					m.authFocusedField = len(m.authFields) - 1
@@ -453,13 +454,14 @@ func (m ProjectCreatorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "down":
-			if m.step == ProjectStepAuthType {
+			switch m.step {
+			case ProjectStepAuthType:
 				m.authMenuIndex++
 				if m.authMenuIndex >= len(m.authMenuItems) {
 					m.authMenuIndex = 0
 				}
 				return m, nil
-			} else if m.step == ProjectStepAuthDetails {
+			case ProjectStepAuthDetails:
 				m.authFocusedField++
 				if m.authFocusedField >= len(m.authFields) {
 					m.authFocusedField = 0
