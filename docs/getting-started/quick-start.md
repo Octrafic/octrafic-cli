@@ -168,7 +168,6 @@ Octrafic will create comprehensive test scenarios covering:
 | `--auth bearer --token <token>` | Bearer authentication | `--auth bearer --token abc123` |
 | `--auth apikey --key <name> --value <val>` | API key authentication | `--auth apikey --key X-API-Key --value abc123` |
 | `--auth basic --user <u> --pass <p>` | Basic authentication | `--auth basic --user admin --pass secret` |
-| `--save-auth` | Save auth with project (plain text) | `--save-auth` |
 | `--clear-auth` | Remove saved auth from project | `--clear-auth` |
 
 ### In-session commands
@@ -218,20 +217,10 @@ octrafic -u https://api.example.com -s new-spec.yaml -n "Production API"
 # You'll be prompted to confirm the update
 ```
 
-### Saving authentication
+### Managing authentication
 
 ```bash
-# Save project with authentication
-octrafic -u https://api.example.com -s spec.yaml -n "API" \
-  --auth apikey --key X-API-Key --value secret123 --save-auth
-
-# Warning will be shown about plain text storage
-
-# Load project - auth is used automatically
-octrafic -n "API"
-# ✓ Using saved authentication (apikey)
-
-# Override saved auth with different credentials
+# Override auth with different credentials
 octrafic -n "API" --auth bearer --token newtoken
 
 # Clear saved authentication
