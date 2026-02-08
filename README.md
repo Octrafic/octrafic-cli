@@ -11,7 +11,7 @@ AI-powered CLI tool for API testing and exploration. Chat naturally with your AP
 - **Natural language testing** - Describe what you want to test, AI generates the right requests
 - **Intelligent exploration** - Ask questions about endpoints, parameters, and responses
 - **Automated test generation** - Comprehensive test suites based on your API specs
-- **Multiple AI providers** - Claude (Anthropic), OpenRouter, OpenAI with model selection
+- **Multiple AI providers** - Claude, OpenRouter, OpenAI, Ollama, llama.cpp
 - **Flexible authentication** - Bearer tokens, API keys, Basic auth with secure credential handling
 - **Format support** - OpenAPI/Swagger (JSON/YAML), Postman Collections, GraphQL, Markdown
 
@@ -46,9 +46,11 @@ yay -S octrafic-bin
 On first launch, configure your AI provider:
 
 **Supported providers:**
-- **Claude (Anthropic)** - Sonnet 4.5, Opus 4.6, Haiku 4.5 - Get API key: [console.anthropic.com](https://console.anthropic.com)
-- **OpenRouter** - Claude, GPT-5.2, Gemini, and more - Get API key: [openrouter.ai/keys](https://openrouter.ai/keys)
-- **OpenAI** - GPT-5.2 and other models - Get API key: [platform.openai.com](https://platform.openai.com)
+- **Claude** - [console.anthropic.com](https://console.anthropic.com)
+- **OpenRouter** - [openrouter.ai/keys](https://openrouter.ai/keys)
+- **OpenAI** - [platform.openai.com](https://platform.openai.com)
+- **Ollama** (local) - [ollama.com](https://ollama.com)
+- **llama.cpp** (local) - [github.com/ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
 
 Configuration is saved in `~/.octrafic/config.json`
 
@@ -116,7 +118,7 @@ octrafic/
 │   ├── cli/               # Terminal UI (Bubble Tea)
 │   ├── core/              # Parser, test generator, validator
 │   ├── infra/             # Storage, logger
-│   └── llm/               # LLM client wrappers (Claude, OpenRouter, OpenAI)
+│   └── llm/               # LLM client wrappers (Claude, OpenRouter, OpenAI, Ollama, llama.cpp)
 ├── docs/                  # Documentation (VitePress)
 └── README.md
 ```

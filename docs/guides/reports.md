@@ -36,12 +36,10 @@ The file name includes a timestamp so reports never overwrite each other.
 
 ## What's in the report
 
-A typical report includes:
-
-- **Title and date** — when the test was run
-- **Summary** — total tests, passed, failed
-- **Results table** — method, endpoint, status code, duration
-- **Analysis** — observations and recommendations from the AI
+- Title and date
+- Summary — total tests, passed, failed
+- Results table — method, endpoint, status code, duration
+- AI analysis and recommendations
 
 ## Example prompts
 

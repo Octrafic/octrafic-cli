@@ -31,10 +31,15 @@ When you start Octrafic for the first time, you'll go through a quick setup:
 1. **Choose your AI provider**
    - Anthropic Claude (recommended)
    - OpenRouter (access to multiple models)
+   - OpenAI
+   - Ollama (local, no API key needed)
+   - llama.cpp (local, no API key needed)
 
-2. **Enter your API key**
+2. **Enter your API key** (cloud providers) or **server URL** (local providers)
    - Get Claude API key: [console.anthropic.com](https://console.anthropic.com)
    - Get OpenRouter API key: [openrouter.ai/keys](https://openrouter.ai/keys)
+   - Get OpenAI API key: [platform.openai.com](https://platform.openai.com)
+   - For Ollama/llama.cpp, see [Providers guide](/guides/providers)
 
 3. **Select a model**
    - Choose from available models for your provider
