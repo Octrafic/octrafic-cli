@@ -21,6 +21,7 @@ import (
 // instead of using a dedicated reasoning field.
 type thinkTagFilter struct {
 	insideThink bool
+	trimNext    bool // trim leading whitespace from next content emission after </think>
 	buffer      string
 	callback    StreamCallback
 }
@@ -61,7 +62,17 @@ func (f *thinkTagFilter) Process(chunk string) {
 			}
 			f.buffer = f.buffer[idx+len("</think>"):]
 			f.insideThink = false
+			f.trimNext = true
 		} else {
+			// Trim leading whitespace from content right after </think>
+			if f.trimNext {
+				f.buffer = strings.TrimLeft(f.buffer, " \t\n\r")
+				if f.buffer == "" {
+					return
+				}
+				f.trimNext = false
+			}
+
 			idx := strings.Index(f.buffer, "<think>")
 			if idx == -1 {
 				// Check for partial opening tag at the end
