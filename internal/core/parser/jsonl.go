@@ -34,7 +34,7 @@ func IsJSONLFormat(specPath string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	decoder := json.NewDecoder(file)
 
@@ -97,7 +97,7 @@ func ConvertOpenAPIToJSONL(specPath, outputPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
-	defer outFile.Close()
+	defer func() { _ = outFile.Close() }()
 
 	encoder := json.NewEncoder(outFile)
 
@@ -156,13 +156,14 @@ func ConvertOpenAPIToJSONL(specPath, outputPath string) error {
 			}
 
 			// Add method-specific tags
-			if method == "get" {
+			switch method {
+			case "get":
 				endpoint.Tags = append(endpoint.Tags, "read")
-			} else if method == "post" {
+			case "post":
 				endpoint.Tags = append(endpoint.Tags, "create")
-			} else if method == "put" || method == "patch" {
+			case "put", "patch":
 				endpoint.Tags = append(endpoint.Tags, "update")
-			} else if method == "delete" {
+			case "delete":
 				endpoint.Tags = append(endpoint.Tags, "delete")
 			}
 
@@ -231,7 +232,7 @@ func LoadJSONLEndpoints(jsonlPath string) ([]Endpoint, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open JSONL file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var endpoints []Endpoint
 	decoder := json.NewDecoder(file)

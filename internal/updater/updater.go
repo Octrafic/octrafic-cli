@@ -38,7 +38,7 @@ func CheckLatestVersion(currentVersion string) (*UpdateInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to check for updates: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
@@ -77,7 +77,7 @@ func FetchReleaseNotes(version string) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("failed to fetch release notes: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", "", fmt.Errorf("release not found (status %d)", resp.StatusCode)

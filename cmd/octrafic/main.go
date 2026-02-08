@@ -22,8 +22,6 @@ import (
 
 var (
 	version = "dev"
-	commit  = ""
-	date    = ""
 )
 
 var (
@@ -134,7 +132,7 @@ var rootCmd = &cobra.Command{
 					}
 					fmt.Printf("\nUpdate project? (y/N): ")
 					var response string
-					fmt.Scanln(&response)
+					_, _ = fmt.Scanln(&response)
 					if response != "y" && response != "Y" {
 						fmt.Println("Update cancelled")
 						os.Exit(0)
@@ -464,7 +462,7 @@ func loadAndStartProject(project *storage.Project) {
 			fmt.Printf("⚠️  Warning: %v\n", err)
 			fmt.Printf("Please provide a new path to the specification file: ")
 			var newPath string
-			fmt.Scanln(&newPath)
+			_, _ = fmt.Scanln(&newPath)
 			if err := storage.ValidateSpecPath(newPath); err != nil {
 				logger.Error("Spec path validation failed", logger.Err(err))
 				os.Exit(1)
@@ -516,7 +514,7 @@ func init() {
 }
 
 func main() {
-	godotenv.Load()
+	_ = godotenv.Load()
 	if isFirstLaunch, err := internalConfig.IsFirstLaunch(); err == nil && isFirstLaunch {
 		completed := runOnboarding()
 		if !completed {
@@ -554,7 +552,7 @@ func checkForUpdate(currentVersion string) {
 
 	cfg.LastUpdateCheck = time.Now()
 	cfg.LatestVersion = info.LatestVersion
-	cfg.Save()
+	_ = cfg.Save()
 }
 
 func runOnboarding() bool {

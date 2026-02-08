@@ -58,7 +58,7 @@ func ConvertToOpenAPI(specPath string, detectedFormat string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to create LLM provider: %w", err)
 	}
-	defer provider.Close()
+	defer func() { _ = provider.Close() }()
 
 	// Prepare conversion prompt
 	prompt := fmt.Sprintf(conversionPrompt, detectedFormat, string(content))
@@ -127,7 +127,6 @@ func extractJSON(response string) string {
 			depth--
 			if depth == 0 {
 				end = i + 1
-				break
 			}
 		}
 		if end != -1 {

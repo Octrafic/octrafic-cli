@@ -344,13 +344,14 @@ func (m *OnboardingModel) testAPIKey() tea.Cmd {
 			}
 		}
 
-		if provider == "anthropic" {
+		switch provider {
+		case "anthropic":
 			models, err = fetchAnthropicModels(apiKey)
-		} else if provider == "openrouter" {
+		case "openrouter":
 			models, err = fetchOpenRouterModels(apiKey)
-		} else if provider == "openai" {
+		case "openai":
 			models, err = fetchOpenAIModels(apiKey)
-		} else {
+		default:
 			return KeyTestResult{
 				Success:  false,
 				Error:    fmt.Sprintf("Unknown provider: %s", provider),
@@ -801,7 +802,7 @@ func fetchLocalModels(serverURL string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to server at %s: %w", serverURL, err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode != 200 {
 		body, _ := io.ReadAll(res.Body)
@@ -844,7 +845,7 @@ func fetchAnthropicModels(apiKey string) ([]string, error) {
 	// Try to fetch models - this will validate the API key
 	page, err := client.Models.List(context.TODO(), anthropic.ModelListParams{})
 	if err != nil {
-		return nil, fmt.Errorf("Anthropic API error: %w", err)
+		return nil, fmt.Errorf("anthropic API error: %w", err)
 	}
 
 	var models []string
@@ -853,7 +854,7 @@ func fetchAnthropicModels(apiKey string) ([]string, error) {
 
 		// Anthropic models should NOT have provider prefixes like "anthropic/"
 		if strings.Contains(modelID, "/") {
-			return nil, fmt.Errorf("unexpected model format '%s' - looks like OpenRouter data! Check your API key.", modelID)
+			return nil, fmt.Errorf("unexpected model format '%s' - looks like OpenRouter data, check your API key", modelID)
 		}
 
 		models = append(models, modelID)
@@ -865,7 +866,7 @@ func fetchAnthropicModels(apiKey string) ([]string, error) {
 
 	// Anthropic typically has <20 models, not hundreds
 	if len(models) > 50 {
-		return nil, fmt.Errorf("got %d models from Anthropic API - expected ~10-20. This looks wrong!", len(models))
+		return nil, fmt.Errorf("got %d models from Anthropic API - expected ~10-20, this looks wrong", len(models))
 	}
 
 	return models, nil
@@ -898,7 +899,7 @@ func fetchOpenRouterModels(apiKey string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch models: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode != 200 {
 		body, _ := io.ReadAll(res.Body)
@@ -982,7 +983,7 @@ func fetchOpenAIModels(apiKey string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch models: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode != 200 {
 		body, _ := io.ReadAll(res.Body)

@@ -415,21 +415,22 @@ func (m TestUIModel) View() string {
 		descStyle := lipgloss.NewStyle().Foreground(Theme.TextMuted)
 
 		// Vertical list with 3 options and descriptions
-		if m.confirmationChoice == 0 {
+		switch m.confirmationChoice {
+		case 0:
 			s.WriteString(yesStyle.Bold(true).Render("> Yes") + "\n")
 			s.WriteString(descStyle.Render("  Execute this request and see the results") + "\n\n")
 			s.WriteString(noStyle.Render("  No") + "\n")
 			s.WriteString(descStyle.Render("  Cancel and stop all remaining tests") + "\n\n")
 			s.WriteString(skipStyle.Render("  Skip") + "\n")
 			s.WriteString(descStyle.Render("  Skip this test and continue to the next one") + "\n")
-		} else if m.confirmationChoice == 1 {
+		case 1:
 			s.WriteString(yesStyle.Render("  Yes") + "\n")
 			s.WriteString(descStyle.Render("  Execute this request and see the results") + "\n\n")
 			s.WriteString(noStyle.Bold(true).Render("> No") + "\n")
 			s.WriteString(descStyle.Render("  Cancel and stop all remaining tests") + "\n\n")
 			s.WriteString(skipStyle.Render("  Skip") + "\n")
 			s.WriteString(descStyle.Render("  Skip this test and continue to the next one") + "\n")
-		} else {
+		default:
 			s.WriteString(yesStyle.Render("  Yes") + "\n")
 			s.WriteString(descStyle.Render("  Execute this request and see the results") + "\n\n")
 			s.WriteString(noStyle.Render("  No") + "\n")
