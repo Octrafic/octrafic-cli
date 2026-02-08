@@ -87,7 +87,7 @@ func (e *Executor) ExecuteTest(method, endpoint string, headers map[string]strin
 			Error:    fmt.Errorf("request failed: %w", err),
 		}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Read response
 	respBody, err := io.ReadAll(resp.Body)

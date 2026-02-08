@@ -388,12 +388,14 @@ func (m TestUIModel) RenderWizard() string {
 
 // renderAuthWizard renders the authentication wizard
 func (m TestUIModel) renderAuthWizard() string {
-	if m.wizardState.Step == StepSelectType {
+	switch m.wizardState.Step {
+	case StepSelectType:
 		return m.renderAuthTypeSelector()
-	} else if m.wizardState.Step == StepFillForm {
+	case StepFillForm:
 		return m.renderAuthForm()
+	default:
+		return ""
 	}
-	return ""
 }
 
 // renderAuthTypeSelector renders the auth type selection menu
