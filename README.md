@@ -1,8 +1,17 @@
-# Octrafic
+<p align="center">
+  <img src="https://octrafic.com/octrafic-logo.png" alt="Octrafic" width="120" />
+</p>
 
-AI-powered CLI tool for API testing and exploration. Chat naturally with your APIs - no scripts, no configuration files, just conversation.
+<h1 align="center">Octrafic</h1>
 
-**[Documentation](https://docs.octrafic.com)**
+<p align="center">
+  AI-powered CLI tool for API testing and exploration.<br/>
+  Chat naturally with your APIs - no scripts, no configuration files, just conversation.
+</p>
+
+<p align="center">
+  <a href="https://docs.octrafic.com"><strong>Documentation</strong></a>
+</p>
 
 ![Demo](./demo/demo.gif)
 
