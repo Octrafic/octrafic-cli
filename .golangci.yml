@@ -1,0 +1,24 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+issues:
+  exclude-rules:
+    # Ignore unchecked errors on defer Close/Remove — standard Go pattern
+    - linters: [errcheck]
+      source: "defer "
+
+    # Ignore unchecked errors in tests
+    - linters: [errcheck]
+      path: _test\.go
+
+    # Ignore staticcheck style suggestions (QF/ST)
+    - linters: [staticcheck]
+      text: "^(QF|ST)"
