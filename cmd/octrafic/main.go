@@ -21,12 +21,12 @@ import (
 )
 
 const (
-	authTypeEnvVar = "OCTRAFIC_AUTH_TYPE"
+	authTypeEnvVar  = "OCTRAFIC_AUTH_TYPE"
 	authTokenEnvVar = "OCTRAFIC_AUTH_TOKEN"
-	authKeyEnvVar = "OCTRAFIC_AUTH_KEY"
+	authKeyEnvVar   = "OCTRAFIC_AUTH_KEY"
 	authValueEnvVar = "OCTRAFIC_AUTH_VALUE"
-	authUserEnvVar = "OCTRAFIC_AUTH_USER"
-	authPassEnvVar = "OCTRAFIC_AUTH_PASS"
+	authUserEnvVar  = "OCTRAFIC_AUTH_USER"
+	authPassEnvVar  = "OCTRAFIC_AUTH_PASS"
 )
 
 var (
@@ -309,7 +309,6 @@ func createAuthConfig() *storage.AuthConfig {
 	return config
 }
 
-
 func generateUUID() string {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
@@ -488,7 +487,7 @@ func loadAndStartProject(project *storage.Project) {
 	var authProvider auth.AuthProvider
 	if authType != "" && authType != "none" {
 		authProvider = buildAuthFromFlags()
-	} else if _,exists := os.LookupEnv("OCTRAFIC_AUTH_TYPE"); exists  {
+	} else if authEnv, exists := os.LookupEnv(authTypeEnvVar); exists && authEnv != "" {
 		authProvider = buildAuthFromEnvironments()
 	} else if project.HasAuth() {
 		authProvider = buildAuthFromProject(project)
