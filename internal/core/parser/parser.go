@@ -331,13 +331,13 @@ func parseGraphQL(content string) (*Specification, error) {
 		if strings.HasPrefix(trimmed, "type Query") && (strings.Contains(trimmed, "{") || strings.Contains(trimmed, "implements")) {
 			currentType = "Query"
 			inType = true
-			braceDepth = 0
+			braceDepth = strings.Count(trimmed, "{") - strings.Count(trimmed, "}")
 			continue
 		}
 		if strings.HasPrefix(trimmed, "type Mutation") && (strings.Contains(trimmed, "{") || strings.Contains(trimmed, "implements")) {
 			currentType = "Mutation"
 			inType = true
-			braceDepth = 0
+			braceDepth = strings.Count(trimmed, "{") - strings.Count(trimmed, "}")
 			continue
 		}
 
