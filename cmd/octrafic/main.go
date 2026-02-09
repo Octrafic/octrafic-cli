@@ -20,6 +20,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	authTypeEnvVar  = "OCTRAFIC_AUTH_TYPE"
+	authTokenEnvVar = "OCTRAFIC_AUTH_TOKEN"
+	authKeyEnvVar   = "OCTRAFIC_AUTH_KEY"
+	authValueEnvVar = "OCTRAFIC_AUTH_VALUE"
+	authUserEnvVar  = "OCTRAFIC_AUTH_USER"
+	authPassEnvVar  = "OCTRAFIC_AUTH_PASS"
+)
+
 var (
 	version = "dev"
 )
@@ -188,6 +197,44 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+func buildAuthFromEnvironments() auth.AuthProvider {
+	authType := os.Getenv(authTypeEnvVar)
+
+	switch authType {
+	case "bearer":
+		authToken := os.Getenv(authTokenEnvVar)
+		if authToken == "" {
+			logger.Error("OCTRAFIC_AUTH_TOKEN is required when using OCTRAFIC_AUTH_TYPE bearer")
+			os.Exit(1)
+		}
+		return auth.NewBearerAuth(authToken)
+	case "apikey":
+		authKey := os.Getenv(authKeyEnvVar)
+		authValue := os.Getenv(authValueEnvVar)
+
+		if authKey == "" || authValue == "" {
+			logger.Error("OCTRAFIC_AUTH_KEY and OCTRAFIC_AUTH_VALUE are required when using OCTRAFIC_AUTH_TYPE apikey")
+			os.Exit(1)
+		}
+		return auth.NewAPIKeyAuth(authKey, authValue, "header")
+	case "basic":
+		authUser := os.Getenv(authUserEnvVar)
+		authPass := os.Getenv(authPassEnvVar)
+
+		if authUser == "" || authPass == "" {
+			logger.Error("OCTRAFIC_AUTH_USER and OCTRAFIC_AUTH_PASS are required when using OCTRAFIC_AUTH_TYPE basic")
+			os.Exit(1)
+		}
+		return auth.NewBasicAuth(authUser, authPass)
+	case "none":
+		return &auth.NoAuth{}
+	default:
+		logger.Error("Invalid OCTRAFIC_AUTH_TYPE", logger.String("type", authType))
+		os.Exit(1)
+		return nil
+	}
+}
+
 func buildAuthFromFlags() auth.AuthProvider {
 	switch authType {
 	case "bearer":
@@ -261,7 +308,6 @@ func createAuthConfig() *storage.AuthConfig {
 
 	return config
 }
-
 
 func generateUUID() string {
 	b := make([]byte, 16)
@@ -441,6 +487,8 @@ func loadAndStartProject(project *storage.Project) {
 	var authProvider auth.AuthProvider
 	if authType != "" && authType != "none" {
 		authProvider = buildAuthFromFlags()
+	} else if authEnv, exists := os.LookupEnv(authTypeEnvVar); exists && authEnv != "" {
+		authProvider = buildAuthFromEnvironments()
 	} else if project.HasAuth() {
 		authProvider = buildAuthFromProject(project)
 		fmt.Printf("✓ Using saved authentication (%s)\n", project.AuthConfig.Type)
