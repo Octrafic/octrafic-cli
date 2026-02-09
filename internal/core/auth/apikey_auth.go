@@ -8,9 +8,9 @@ import (
 
 // APIKeyAuth represents API Key authentication
 type APIKeyAuth struct {
-	Key      string `json:"key"`       // The key name (e.g., "X-API-Key")
-	Value    string `json:"value"`     // The key value
-	Location string `json:"location"`  // "header" or "query"
+	Key      string `json:"key"`      // The key name (e.g., "X-API-Key")
+	Value    string `json:"value"`    // The key value
+	Location string `json:"location"` // "header" or "query"
 }
 
 // NewAPIKeyAuth creates a new API Key authentication provider

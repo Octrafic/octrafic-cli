@@ -1014,4 +1014,3 @@ func fetchOpenAIModels(apiKey string) ([]string, error) {
 
 	return modelIDs, nil
 }
-

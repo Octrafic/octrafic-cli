@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/core/auth"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/core/auth"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"

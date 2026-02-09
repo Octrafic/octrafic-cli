@@ -238,7 +238,7 @@ func (c *Client) ChatStream(messages []Message, tools []Tool, thinkingEnabled bo
 // chatStream uses /v1/chat/completions
 func (c *Client) chatStream(messages []Message, tools []Tool, thinkingEnabled bool, callback StreamCallback) (*ChatResponse, *TokenUsage, error) {
 	reqBody := c.buildRequestPayload(messages, tools, true)
-	
+
 	if strings.Contains(c.baseURL, "openrouter.ai") {
 		reqBody["include_reasoning"] = true
 	}
@@ -287,15 +287,21 @@ func (c *Client) chatStream(messages []Message, tools []Tool, thinkingEnabled bo
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			if err == io.EOF { break }
+			if err == io.EOF {
+				break
+			}
 			return nil, nil, err
 		}
 
 		line = strings.TrimSpace(line)
-		if line == "" || !strings.HasPrefix(line, "data: ") { continue }
+		if line == "" || !strings.HasPrefix(line, "data: ") {
+			continue
+		}
 
 		data := strings.TrimPrefix(line, "data: ")
-		if data == "[DONE]" { break }
+		if data == "[DONE]" {
+			break
+		}
 
 		res := gjson.Parse(data)
 
@@ -364,11 +370,15 @@ func (c *Client) chat(messages []Message, tools []Tool) (*ChatResponse, *TokenUs
 	reqBody := c.buildRequestPayload(messages, tools, false)
 	bodyBytes, _ := json.Marshal(reqBody)
 	req, err := http.NewRequestWithContext(c.ctx, "POST", c.baseURL+"/chat/completions", bytes.NewReader(bodyBytes))
-	if err != nil { return nil, nil, err }
+	if err != nil {
+		return nil, nil, err
+	}
 
 	c.setHeaders(req)
 	resp, err := c.httpClient.Do(req)
-	if err != nil { return nil, nil, err }
+	if err != nil {
+		return nil, nil, err
+	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
@@ -380,7 +390,9 @@ func (c *Client) chat(messages []Message, tools []Tool) (*ChatResponse, *TokenUs
 	msg := res.Get("choices.0.message")
 
 	reasoning := msg.Get("reasoning_content").String()
-	if reasoning == "" { reasoning = msg.Get("reasoning").String() }
+	if reasoning == "" {
+		reasoning = msg.Get("reasoning").String()
+	}
 
 	content := msg.Get("content").String()
 
@@ -428,7 +440,7 @@ func (c *Client) buildRequestPayload(messages []Message, tools []Tool, stream bo
 
 	if strings.HasPrefix(c.model, "o1") || strings.HasPrefix(c.model, "o3") {
 		payload["reasoning_effort"] = "medium"
-		payload["max_completion_tokens"] = 10000 
+		payload["max_completion_tokens"] = 10000
 	}
 
 	if stream {
@@ -458,8 +470,8 @@ func (c *Client) convertMessages(messages []Message) []map[string]interface{} {
 			for _, fc := range m.FunctionCalls {
 				args, _ := json.Marshal(fc.Args)
 				tcs = append(tcs, map[string]interface{}{
-					"id":   fc.ID,
-					"type": "function",
+					"id":       fc.ID,
+					"type":     "function",
 					"function": map[string]interface{}{"name": fc.Name, "arguments": string(args)},
 				})
 			}

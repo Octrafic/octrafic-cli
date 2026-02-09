@@ -1,12 +1,12 @@
 package agent
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/config"
-	"github.com/Octrafic/octrafic-cli/internal/llm"
-	"github.com/Octrafic/octrafic-cli/internal/llm/common"
-	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"encoding/json"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/config"
+	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
+	"github.com/Octrafic/octrafic-cli/internal/llm"
+	"github.com/Octrafic/octrafic-cli/internal/llm/common"
 	"os"
 	"strings"
 )

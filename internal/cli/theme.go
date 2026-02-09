@@ -16,8 +16,8 @@ var Theme = struct {
 	PrimaryLight  lipgloss.Color // Light variant (Sky Blue 300) #7DD3FC
 
 	// Cyan accent colors
-	Cyan        lipgloss.Color // Cyan 400 #22D3EE
-	CyanLight   lipgloss.Color // Cyan 300 #67E8F9
+	Cyan      lipgloss.Color // Cyan 400 #22D3EE
+	CyanLight lipgloss.Color // Cyan 300 #67E8F9
 
 	// Semantic colors - HTTP methods (pastel shades)
 	Success lipgloss.Color // GET - Emerald 400 #34D399
@@ -26,7 +26,7 @@ var Theme = struct {
 	Info    lipgloss.Color // POST - Sky Blue 400 #38BDF8
 
 	// Special accent colors
-	Yellow lipgloss.Color // Highlight - Yellow 300 #FDE047
+	Yellow  lipgloss.Color // Highlight - Yellow 300 #FDE047
 	Fuchsia lipgloss.Color // Strong accent - Fuchsia 400 #E879F9
 
 	// Text colors - readable hierarchy
@@ -43,9 +43,9 @@ var Theme = struct {
 	BgCode      lipgloss.Color // Code background (Slate 800) #1E293B
 
 	// Border colors
-	BorderSubtle lipgloss.Color // Subtle border (Slate 700) #334155
+	BorderSubtle  lipgloss.Color // Subtle border (Slate 700) #334155
 	BorderDefault lipgloss.Color // Default border (Slate 600) #475569
-	BorderBright lipgloss.Color // Bright border (Sky Blue 500) #0EA5E9
+	BorderBright  lipgloss.Color // Bright border (Sky Blue 500) #0EA5E9
 
 	// Blue/Indigo shades (for gradients/headers)
 	Blue      lipgloss.Color // Blue 400 #60A5FA
@@ -54,9 +54,9 @@ var Theme = struct {
 	Violet    lipgloss.Color // Violet 400 #A78BFA
 
 	// Gradients
-	LogoGradient       []string // Sky blue progression for logo
-	AnimationGradient  []string // Rainbow effect for animations
-	HeaderGradient     []string // Sky to purple for headers
+	LogoGradient      []string // Sky blue progression for logo
+	AnimationGradient []string // Rainbow effect for animations
+	HeaderGradient    []string // Sky to purple for headers
 }{
 	// Primary - Sky Blue
 	Primary:       lipgloss.Color("#38BDF8"), // Sky Blue 400

@@ -1,8 +1,8 @@
 package claude
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/llm/common"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/llm/common"
 )
 
 // ClaudeProvider implements common.Provider for Claude
@@ -32,10 +32,10 @@ func (p *ClaudeProvider) Chat(messages []common.Message, tools []common.Tool, th
 	}
 
 	return &common.ChatResponse{
-		Message:      responseText,
-		Reasoning:    thoughtText,
+		Message:       responseText,
+		Reasoning:     thoughtText,
 		FunctionCalls: convertFunctionCalls(functionCalls),
-		TokenUsage:   convertTokenUsage(tokenUsage),
+		TokenUsage:    convertTokenUsage(tokenUsage),
 	}, nil
 }
 
@@ -53,9 +53,9 @@ func (p *ClaudeProvider) ChatStream(messages []common.Message, tools []common.To
 	}
 
 	return &common.ChatResponse{
-		Message:      responseText,
+		Message:       responseText,
 		FunctionCalls: convertFunctionCalls(functionCalls),
-		TokenUsage:   convertTokenUsage(tokenUsage),
+		TokenUsage:    convertTokenUsage(tokenUsage),
 	}, nil
 }
 
@@ -116,8 +116,8 @@ func convertFunctionCalls(calls []FunctionCallResult) []common.FunctionCall {
 	result := make([]common.FunctionCall, 0, len(calls))
 	for _, call := range calls {
 		result = append(result, common.FunctionCall{
-			ID:       call.ID,
-			Name:     call.Name,
+			ID:        call.ID,
+			Name:      call.Name,
 			Arguments: call.Args,
 		})
 	}

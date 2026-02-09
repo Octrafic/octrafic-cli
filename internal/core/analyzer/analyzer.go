@@ -1,16 +1,16 @@
 package analyzer
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/core/parser"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/core/parser"
 	"time"
 )
 
 type Analysis struct {
-	BaseURL       string              `json:"base_url"`
-	Specification *parser.Specification `json:"specification"`
-	Timestamp     time.Time           `json:"timestamp"`
-	Insights      []string            `json:"insights"`
+	BaseURL       string                      `json:"base_url"`
+	Specification *parser.Specification       `json:"specification"`
+	Timestamp     time.Time                   `json:"timestamp"`
+	Insights      []string                    `json:"insights"`
 	EndpointInfo  map[string]EndpointAnalysis `json:"endpoint_info"`
 }
 

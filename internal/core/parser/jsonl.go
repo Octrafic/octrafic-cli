@@ -11,15 +11,15 @@ import (
 
 // JSONLEndpoint represents a single API endpoint in JSONL format
 type JSONLEndpoint struct {
-	Method       string                 `json:"method"`
-	Path         string                 `json:"path"`
-	Summary      string                 `json:"summary"`
-	Description  string                 `json:"description,omitempty"`
-	Parameters   []string               `json:"parameters,omitempty"`
+	Method       string         `json:"method"`
+	Path         string         `json:"path"`
+	Summary      string         `json:"summary"`
+	Description  string         `json:"description,omitempty"`
+	Parameters   []string       `json:"parameters,omitempty"`
 	RequestBody  map[string]any `json:"request_body,omitempty"`
-	Tags         []string               `json:"tags,omitempty"`
-	RequiresAuth bool                   `json:"requires_auth"`
-	AuthType     string                 `json:"auth_type"` // "bearer", "basic", "apikey", "none"
+	Tags         []string       `json:"tags,omitempty"`
+	RequiresAuth bool           `json:"requires_auth"`
+	AuthType     string         `json:"auth_type"` // "bearer", "basic", "apikey", "none"
 }
 
 // IsJSONLFormat checks if the file is already in JSONL format
@@ -187,24 +187,24 @@ func isHTTPMethodLowercase(s string) bool {
 func extractTagsFromPath(path string) []string {
 	tags := []string{}
 	parts := strings.Split(strings.Trim(path, "/"), "/")
-	
+
 	if len(parts) > 0 && parts[0] != "" {
 		// First segment is usually the category
 		tags = append(tags, parts[0])
-		
+
 		// If it's a nested resource, add that too
 		if len(parts) > 2 && !strings.HasPrefix(parts[2], "{") {
 			tags = append(tags, parts[2])
 		}
 	}
-	
+
 	return tags
 }
 
 // extractRequestBody extracts request body schema fields
 func extractRequestBody(requestBody map[string]any) map[string]any {
 	result := make(map[string]any)
-	
+
 	// Navigate: requestBody -> content -> application/json -> schema -> properties
 	if content, ok := requestBody["content"].(map[string]any); ok {
 		if appJSON, ok := content["application/json"].(map[string]any); ok {
@@ -222,7 +222,7 @@ func extractRequestBody(requestBody map[string]any) map[string]any {
 			}
 		}
 	}
-	
+
 	return result
 }
 

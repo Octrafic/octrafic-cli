@@ -35,13 +35,13 @@ type Project struct {
 // AuthConfig stores authentication configuration for a project
 // WARNING: Credentials are stored in plain text
 type AuthConfig struct {
-	Type     string `json:"type"`               // none, bearer, apikey, basic
-	Token    string `json:"token,omitempty"`    // Bearer token
-	KeyName  string `json:"key_name,omitempty"` // API key name (e.g., X-API-Key)
-	KeyValue string `json:"key_value,omitempty"`// API key value
-	Location string `json:"location,omitempty"` // header or query
-	Username string `json:"username,omitempty"` // Basic auth username
-	Password string `json:"password,omitempty"` // Basic auth password
+	Type     string `json:"type"`                // none, bearer, apikey, basic
+	Token    string `json:"token,omitempty"`     // Bearer token
+	KeyName  string `json:"key_name,omitempty"`  // API key name (e.g., X-API-Key)
+	KeyValue string `json:"key_value,omitempty"` // API key value
+	Location string `json:"location,omitempty"`  // header or query
+	Username string `json:"username,omitempty"`  // Basic auth username
+	Password string `json:"password,omitempty"`  // Basic auth password
 }
 
 // ClearAuth removes authentication configuration from project
@@ -56,10 +56,10 @@ func (p *Project) HasAuth() bool {
 
 // ProjectContext encapsulates project data with pre-computed paths
 type ProjectContext struct {
-	Project     *Project
-	ProjectPath string
+	Project       *Project
+	ProjectPath   string
 	EndpointsPath string
-	HashPath    string
+	HashPath      string
 }
 
 // NewProjectContext creates a ProjectContext from a loaded or new project

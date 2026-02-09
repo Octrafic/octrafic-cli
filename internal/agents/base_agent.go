@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/llm/common"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/llm/common"
 )
 
 type BaseAgent struct {
@@ -31,8 +31,8 @@ func (a *BaseAgent) Chat(systemPrompt string, tools []common.Tool, inputMessages
 
 		for _, fc := range msg.FunctionCalls {
 			commonMsg.FunctionCalls = append(commonMsg.FunctionCalls, common.FunctionCall{
-				ID:       fc.ID,
-				Name:     fc.Name,
+				ID:        fc.ID,
+				Name:      fc.Name,
 				Arguments: fc.Arguments,
 			})
 		}
@@ -94,8 +94,8 @@ func (a *BaseAgent) ChatStream(systemPrompt string, tools []common.Tool, inputMe
 
 		for _, fc := range msg.FunctionCalls {
 			commonMsg.FunctionCalls = append(commonMsg.FunctionCalls, common.FunctionCall{
-				ID:       fc.ID,
-				Name:     fc.Name,
+				ID:        fc.ID,
+				Name:      fc.Name,
 				Arguments: fc.Arguments,
 			})
 		}

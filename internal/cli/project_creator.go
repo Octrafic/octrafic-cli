@@ -1,9 +1,9 @@
 package cli
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"encoding/json"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,10 +15,10 @@ import (
 
 // FormatInfo contains detected format information
 type FormatInfo struct {
-	Name           string // Human readable name
-	NativeSupport  bool   // Can be parsed without conversion
-	NeedsConversion bool  // Needs LLM conversion
-	Version        string // Format version if detected
+	Name            string // Human readable name
+	NativeSupport   bool   // Can be parsed without conversion
+	NeedsConversion bool   // Needs LLM conversion
+	Version         string // Format version if detected
 }
 
 // detectSpecFormat analyzes file content to determine the API specification format
@@ -238,11 +238,11 @@ type ProjectCreatorModel struct {
 	formatInfo *FormatInfo
 
 	// Auth configuration
-	configureAuth   bool
-	authType        string   // "bearer", "apikey", "basic", "none"
-	authMenuItems   []string // Menu options for auth type selection
-	authMenuIndex   int      // Selected menu item index
-	authFields      []FormField
+	configureAuth    bool
+	authType         string   // "bearer", "apikey", "basic", "none"
+	authMenuItems    []string // Menu options for auth type selection
+	authMenuIndex    int      // Selected menu item index
+	authFields       []FormField
 	authFocusedField int
 }
 
@@ -522,7 +522,7 @@ func (m ProjectCreatorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Let textinput handle other keys (typing, backspace, etc.)
 		if m.step != ProjectStepConfirm && m.step != ProjectStepFormatDetected &&
-		   m.step != ProjectStepAuthPrompt && m.step != ProjectStepAuthType && m.step != ProjectStepAuthDetails {
+			m.step != ProjectStepAuthPrompt && m.step != ProjectStepAuthType && m.step != ProjectStepAuthDetails {
 			m.input, cmd = m.input.Update(msg)
 			m.validationError = ""
 			return m, cmd
@@ -771,7 +771,7 @@ func (m ProjectCreatorModel) renderConfirmation() string {
 	var conversionLine string
 	if m.formatInfo != nil && m.formatInfo.NeedsConversion {
 		conversionLine = labelStyle.Render("Conversion: ") +
-			lipgloss.NewStyle().Foreground(Theme.Warning).Render(m.formatInfo.Name + " → OpenAPI (LLM)")
+			lipgloss.NewStyle().Foreground(Theme.Warning).Render(m.formatInfo.Name+" → OpenAPI (LLM)")
 	}
 
 	help := lipgloss.NewStyle().

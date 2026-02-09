@@ -12,10 +12,10 @@ import (
 )
 
 type Specification struct {
-	Format    string     `json:"format"`
-	Version   string     `json:"version,omitempty"`
-	Endpoints []Endpoint `json:"endpoints"`
-	RawContent string    `json:"raw_content"`
+	Format     string     `json:"format"`
+	Version    string     `json:"version,omitempty"`
+	Endpoints  []Endpoint `json:"endpoints"`
+	RawContent string     `json:"raw_content"`
 }
 
 type Endpoint struct {
@@ -205,17 +205,17 @@ func parsePostman(content []byte) (*Specification, error) {
 }
 
 type postmanItem struct {
-	Name    string        `json:"name"`
+	Name    string          `json:"name"`
 	Request *postmanRequest `json:"request,omitempty"`
-	Item    []postmanItem `json:"item,omitempty"` // Nested folders
+	Item    []postmanItem   `json:"item,omitempty"` // Nested folders
 }
 
 type postmanRequest struct {
-	Method      string      `json:"method"`
+	Method      string          `json:"method"`
 	Header      []postmanHeader `json:"header"`
-	URL         any         `json:"url"` // Can be string or object
-	Body        *postmanBody `json:"body,omitempty"`
-	Description string      `json:"description,omitempty"`
+	URL         any             `json:"url"` // Can be string or object
+	Body        *postmanBody    `json:"body,omitempty"`
+	Description string          `json:"description,omitempty"`
 }
 
 type postmanHeader struct {

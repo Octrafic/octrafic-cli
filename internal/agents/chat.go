@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/llm/common"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/llm/common"
 )
 
 type ChatMessage struct {
@@ -14,8 +14,8 @@ type ChatMessage struct {
 }
 
 type FunctionResponseData struct {
-	ID       string                 `json:"id"` // tool_use_id from original tool use block
-	Name     string                 `json:"name"`
+	ID       string         `json:"id"` // tool_use_id from original tool use block
+	Name     string         `json:"name"`
 	Response map[string]any `json:"response"`
 }
 
@@ -29,10 +29,10 @@ type ChatResponse struct {
 }
 
 type ToolCall struct {
-	ID               string                 `json:"id,omitempty"`
-	Name             string                 `json:"name"`
+	ID               string         `json:"id,omitempty"`
+	Name             string         `json:"name"`
 	Arguments        map[string]any `json:"arguments"`
-	ThoughtSignature string                 `json:"thought_signature,omitempty"` // base64 encoded []byte (not used by Claude)
+	ThoughtSignature string         `json:"thought_signature,omitempty"` // base64 encoded []byte (not used by Claude)
 }
 
 // ReasoningCallback is called for each chunk as it's streamed

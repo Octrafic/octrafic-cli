@@ -4,17 +4,17 @@ import "time"
 
 // Message represents a chat message
 type Message struct {
-	Role             string                 `json:"role"`
-	Content          string                 `json:"content"`
-	ReasoningContent string                 `json:"reasoning_content,omitempty"`
-	FunctionCalls    []FunctionCall         `json:"function_calls,omitempty"`
-	FunctionResponse *FunctionResponseData  `json:"function_response,omitempty"`
+	Role             string                `json:"role"`
+	Content          string                `json:"content"`
+	ReasoningContent string                `json:"reasoning_content,omitempty"`
+	FunctionCalls    []FunctionCall        `json:"function_calls,omitempty"`
+	FunctionResponse *FunctionResponseData `json:"function_response,omitempty"`
 }
 
 // FunctionCall represents a tool/function call
 type FunctionCall struct {
-	ID       string                 `json:"id,omitempty"`
-	Name     string                 `json:"name"`
+	ID        string                 `json:"id,omitempty"`
+	Name      string                 `json:"name"`
 	Arguments map[string]interface{} `json:"arguments"`
 }
 
@@ -40,10 +40,10 @@ type TokenUsage struct {
 
 // ChatResponse represents the response from a chat request
 type ChatResponse struct {
-	Message      string         `json:"message"`
-	Reasoning    string         `json:"reasoning,omitempty"`
+	Message       string         `json:"message"`
+	Reasoning     string         `json:"reasoning,omitempty"`
 	FunctionCalls []FunctionCall `json:"function_calls,omitempty"`
-	TokenUsage   *TokenUsage    `json:"token_usage,omitempty"`
+	TokenUsage    *TokenUsage    `json:"token_usage,omitempty"`
 }
 
 // StreamCallback is called for each chunk during streaming

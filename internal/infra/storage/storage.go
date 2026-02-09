@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
 	"encoding/json"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
 	"os"
 	"path/filepath"
 )

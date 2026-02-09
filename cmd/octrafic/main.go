@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"fmt"
 	"github.com/Octrafic/octrafic-cli/internal/cli"
 	internalConfig "github.com/Octrafic/octrafic-cli/internal/config"
 	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
@@ -10,8 +12,6 @@ import (
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"github.com/Octrafic/octrafic-cli/internal/updater"
-	"crypto/rand"
-	"fmt"
 	"os"
 	"time"
 

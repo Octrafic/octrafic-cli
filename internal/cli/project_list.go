@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"strings"
 	"time"
 
@@ -37,14 +37,14 @@ var (
 
 // ProjectListModel represents the interactive project list UI
 type ProjectListModel struct {
-	projects        []*storage.Project
+	projects         []*storage.Project
 	filteredProjects []*storage.Project
-	cursor          int
-	searchInput     textinput.Model
-	searching       bool
-	selected        *storage.Project
-	createNew       bool // Set to true when user selects "Create new project"
-	err             error
+	cursor           int
+	searchInput      textinput.Model
+	searching        bool
+	selected         *storage.Project
+	createNew        bool // Set to true when user selects "Create new project"
+	err              error
 }
 
 func NewProjectListModel(projects []*storage.Project) ProjectListModel {
@@ -59,11 +59,11 @@ func NewProjectListModel(projects []*storage.Project) ProjectListModel {
 	}
 
 	return ProjectListModel{
-		projects:        projects,
+		projects:         projects,
 		filteredProjects: projects,
-		cursor:          cursor,
-		searchInput:     ti,
-		searching:       false,
+		cursor:           cursor,
+		searchInput:      ti,
+		searching:        false,
 	}
 }
 

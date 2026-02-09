@@ -1,9 +1,9 @@
 package cli
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/core/auth"
-	"github.com/Octrafic/octrafic-cli/internal/agents"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/agents"
+	"github.com/Octrafic/octrafic-cli/internal/core/auth"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -116,8 +116,8 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 
 		// Only add FunctionResponse if this was from a Claude tool_use (has ID)
 		// If tests were triggered by UI (user selected tests), don't send FunctionResponse
-		hadToolID := m.currentTestToolID != ""        // Check before cleanup
-		completedCount := m.testGroupCompletedCount    // Save before cleanup
+		hadToolID := m.currentTestToolID != ""      // Check before cleanup
+		completedCount := m.testGroupCompletedCount // Save before cleanup
 
 		if hadToolID {
 			// Add FunctionResponse to conversation history

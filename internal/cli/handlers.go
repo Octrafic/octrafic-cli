@@ -1,13 +1,13 @@
 package cli
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/Octrafic/octrafic-cli/internal/agents"
 	"github.com/Octrafic/octrafic-cli/internal/core/parser"
 	"github.com/Octrafic/octrafic-cli/internal/core/reporter"
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
-	"encoding/json"
-	"fmt"
 	"maps"
 	"time"
 
@@ -17,8 +17,8 @@ import (
 )
 
 type ToolCallData struct {
-	ID   string                 `json:"id"`
-	Name string                 `json:"name"`
+	ID   string         `json:"id"`
+	Name string         `json:"name"`
 	Args map[string]any `json:"arguments"`
 }
 
@@ -178,7 +178,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 			return toolResultMsg{
 				toolID:   toolCall.ID,
 				toolName: toolCall.Name,
-				result: map[string]any{"endpoints": results},
+				result:   map[string]any{"endpoints": results},
 				err:      nil,
 			}
 		}
@@ -189,7 +189,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 
 			if method == "" || endpoint == "" {
 				return toolResultMsg{
-			toolID:   toolCall.ID,
+					toolID:   toolCall.ID,
 					toolName: toolCall.Name,
 					result:   nil,
 					err:      fmt.Errorf("missing required parameters: method and endpoint"),
@@ -214,7 +214,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 
 			if err != nil {
 				return toolResultMsg{
-			toolID:   toolCall.ID,
+					toolID:   toolCall.ID,
 					toolName: toolCall.Name,
 					result: map[string]any{
 						"method":   method,
@@ -226,7 +226,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 			}
 
 			return toolResultMsg{
-			toolID:   toolCall.ID,
+				toolID:   toolCall.ID,
 				toolName: toolCall.Name,
 				result: map[string]any{
 					"method":        method,
@@ -276,7 +276,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 			testsArg, ok := toolCall.Arguments["tests"]
 			if !ok {
 				return toolResultMsg{
-			toolID:   toolCall.ID,
+					toolID:   toolCall.ID,
 					toolName: toolCall.Name,
 					err:      fmt.Errorf("missing 'tests' parameter"),
 				}
@@ -285,7 +285,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 			testsSlice, ok := testsArg.([]any)
 			if !ok {
 				return toolResultMsg{
-			toolID:   toolCall.ID,
+					toolID:   toolCall.ID,
 					toolName: toolCall.Name,
 					err:      fmt.Errorf("'tests' parameter must be an array"),
 				}
@@ -302,7 +302,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 
 			if len(tests) == 0 {
 				return toolResultMsg{
-			toolID:   toolCall.ID,
+					toolID:   toolCall.ID,
 					toolName: toolCall.Name,
 					err:      fmt.Errorf("no valid tests to execute"),
 				}
@@ -360,7 +360,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 				m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
-						ID:   toolID,
+						ID:       toolID,
 						Name:     "ExecuteTest",
 						Response: resultMap,
 					},
@@ -423,7 +423,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 				m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
-						ID:   toolID,
+						ID:       toolID,
 						Name:     "ExecuteTestGroup",
 						Response: resultMap,
 					},

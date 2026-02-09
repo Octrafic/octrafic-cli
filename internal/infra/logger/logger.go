@@ -32,8 +32,8 @@ func Init(debugEnabled bool, logFilePath string) error {
 			Level:            zap.NewAtomicLevelAt(level),
 			Encoding:         "json",
 			EncoderConfig:    encoderConfig,
-			OutputPaths:       []string{logFilePath},
-			ErrorOutputPaths:  []string{logFilePath + ".err"},
+			OutputPaths:      []string{logFilePath},
+			ErrorOutputPaths: []string{logFilePath + ".err"},
 		}
 	} else {
 		// No logging - use nop (discard all output)
@@ -41,8 +41,8 @@ func Init(debugEnabled bool, logFilePath string) error {
 			Level:            zap.NewAtomicLevelAt(level),
 			Encoding:         "json",
 			EncoderConfig:    encoderConfig,
-			OutputPaths:       []string{"stdout"},
-			ErrorOutputPaths:  []string{"stderr"},
+			OutputPaths:      []string{"stdout"},
+			ErrorOutputPaths: []string{"stderr"},
 		}
 	}
 
@@ -96,8 +96,6 @@ func Fatal(msg string, fields ...zap.Field) {
 	}
 }
 
-
-
 // Err creates an error field
 func Err(err error) zap.Field {
 	return zap.Error(err)
@@ -107,10 +105,6 @@ func Err(err error) zap.Field {
 func String(key string, value string) zap.Field {
 	return zap.String(key, value)
 }
-
-
-
-
 
 // Bool creates a bool field
 func Bool(key string, value bool) zap.Field {

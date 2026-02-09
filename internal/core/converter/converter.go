@@ -1,10 +1,10 @@
 package converter
 
 import (
+	"fmt"
 	"github.com/Octrafic/octrafic-cli/internal/config"
 	"github.com/Octrafic/octrafic-cli/internal/llm"
 	"github.com/Octrafic/octrafic-cli/internal/llm/common"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"

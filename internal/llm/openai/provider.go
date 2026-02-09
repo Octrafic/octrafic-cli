@@ -1,8 +1,8 @@
 package openai
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/llm/common"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/llm/common"
 )
 
 // OpenAIProvider implements common.Provider for OpenAI/OpenRouter
@@ -39,9 +39,9 @@ func (p *OpenAIProvider) Chat(messages []common.Message, tools []common.Tool, th
 	}
 
 	return &common.ChatResponse{
-		Message:      response.Message,
+		Message:       response.Message,
 		FunctionCalls: convertFunctionCalls(response.ToolCalls),
-		TokenUsage:   convertTokenUsage(tokenUsage),
+		TokenUsage:    convertTokenUsage(tokenUsage),
 	}, nil
 }
 
@@ -59,10 +59,10 @@ func (p *OpenAIProvider) ChatStream(messages []common.Message, tools []common.To
 	}
 
 	return &common.ChatResponse{
-		Message:      response.Message,
-		Reasoning:    response.Reasoning,
+		Message:       response.Message,
+		Reasoning:     response.Reasoning,
 		FunctionCalls: convertFunctionCalls(response.ToolCalls),
-		TokenUsage:   convertTokenUsage(tokenUsage),
+		TokenUsage:    convertTokenUsage(tokenUsage),
 	}, nil
 }
 
@@ -121,8 +121,8 @@ func convertFunctionCalls(calls []FunctionCallData) []common.FunctionCall {
 	result := make([]common.FunctionCall, 0, len(calls))
 	for _, call := range calls {
 		result = append(result, common.FunctionCall{
-			ID:       call.ID,
-			Name:     call.Name,
+			ID:        call.ID,
+			Name:      call.Name,
 			Arguments: call.Args,
 		})
 	}

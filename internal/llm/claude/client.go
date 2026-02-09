@@ -253,8 +253,6 @@ func (c *Client) Chat(messages []Message, thinkingEnabled bool, tools []Tool) (s
 		params.Tools = anthropicTools
 	}
 
-
-
 	// Send request
 	message, err := c.client.Messages.New(c.ctx, params)
 	if err != nil {
@@ -290,7 +288,6 @@ func (c *Client) Chat(messages []Message, thinkingEnabled bool, tools []Tool) (s
 	}
 
 	// Log usage
-
 
 	// Return token usage
 	tokenUsage := &TokenUsage{

@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -41,16 +41,16 @@ var keys = keyMap{
 
 // Model represents the state of our chat-based interactive application
 type ChatModel struct {
-	analysis      *analyzer.Analysis
-	baseURL       string
-	viewport      viewport.Model
-	textarea      textarea.Model
-	messages      []string
-	currentMode   string // "ask" or "test"
-	keys          keyMap
-	senderStyle   lipgloss.Style
-	systemStyle   lipgloss.Style
-	errorStyle   lipgloss.Style
+	analysis       *analyzer.Analysis
+	baseURL        string
+	viewport       viewport.Model
+	textarea       textarea.Model
+	messages       []string
+	currentMode    string // "ask" or "test"
+	keys           keyMap
+	senderStyle    lipgloss.Style
+	systemStyle    lipgloss.Style
+	errorStyle     lipgloss.Style
 	modeStyle      lipgloss.Style
 	agentModeStyle lipgloss.Style
 	askModeStyle   lipgloss.Style
@@ -89,29 +89,29 @@ Available commands:
   exit       - Exit interactive mode`)
 
 	// Initialize styles
-	senderStyle := lipgloss.NewStyle().Foreground(Theme.PrimaryDark) // Blue-500
-	systemStyle := lipgloss.NewStyle().Foreground(Theme.Primary) // Blue-400
-	errorStyle := lipgloss.NewStyle().Foreground(Theme.Error) // Red-500
+	senderStyle := lipgloss.NewStyle().Foreground(Theme.PrimaryDark)            // Blue-500
+	systemStyle := lipgloss.NewStyle().Foreground(Theme.Primary)                // Blue-400
+	errorStyle := lipgloss.NewStyle().Foreground(Theme.Error)                   // Red-500
 	modeStyle := lipgloss.NewStyle().Foreground(Theme.PrimaryStrong).Bold(true) // Blue-600
-	
+
 	// Mode-specific colors
-	agentModeStyle := lipgloss.NewStyle().Foreground(Theme.Success).Bold(true) // Emerald-500 (green)
+	agentModeStyle := lipgloss.NewStyle().Foreground(Theme.Success).Bold(true)   // Emerald-500 (green)
 	askModeStyle := lipgloss.NewStyle().Foreground(Theme.PrimaryDark).Bold(true) // Blue-500 (blue)
 
 	return &ChatModel{
-		analysis:      analysis,
-		baseURL:       baseURL,
-		viewport:      vp,
-		textarea:      ta,
-		messages:      []string{},
-		currentMode:   "agent", // Agent mode is now default
+		analysis:       analysis,
+		baseURL:        baseURL,
+		viewport:       vp,
+		textarea:       ta,
+		messages:       []string{},
+		currentMode:    "agent", // Agent mode is now default
 		keys:           keys,
-		senderStyle:   senderStyle,
-		systemStyle:   systemStyle,
-		errorStyle:    errorStyle,
-		modeStyle:     modeStyle,
+		senderStyle:    senderStyle,
+		systemStyle:    systemStyle,
+		errorStyle:     errorStyle,
+		modeStyle:      modeStyle,
 		agentModeStyle: agentModeStyle,
-		askModeStyle:  askModeStyle,
+		askModeStyle:   askModeStyle,
 	}
 }
 

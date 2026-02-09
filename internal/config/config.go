@@ -10,9 +10,9 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	Provider  string `json:"provider"`
-	APIKey    string `json:"api_key,omitempty"`
-	BaseURL   string `json:"base_url,omitempty"`
+	Provider        string    `json:"provider"`
+	APIKey          string    `json:"api_key,omitempty"`
+	BaseURL         string    `json:"base_url,omitempty"`
 	Model           string    `json:"model"`
 	Onboarded       bool      `json:"onboarded"`
 	LastUpdateCheck time.Time `json:"last_update_check,omitempty"`

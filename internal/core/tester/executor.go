@@ -1,10 +1,10 @@
 package tester
 
 import (
-	"github.com/Octrafic/octrafic-cli/internal/core/auth"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/core/auth"
 	"io"
 	"net/http"
 	"strings"
