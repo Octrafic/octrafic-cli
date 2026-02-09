@@ -3,9 +3,12 @@ version: "2"
 linters:
   default: none
   enable:
-    - gofmt
     - errcheck
     - govet
     - ineffassign
     - staticcheck
     - unused
+
+formatters:
+  enable:
+    - gofmt
