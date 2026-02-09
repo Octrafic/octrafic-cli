@@ -13,7 +13,7 @@ import (
 func Start(baseURL string, specPath string, analysis *analyzer.Analysis, authProvider auth.AuthProvider, version string) {
 	model := NewTestUIModel(baseURL, specPath, analysis, authProvider, version)
 
-	p := tea.NewProgram(model)
+	p := tea.NewProgram(model, tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		logger.Error("Error running interactive mode", logger.Err(err))
 		os.Exit(1)
@@ -27,10 +27,9 @@ func StartWithProject(baseURL string, analysis *analyzer.Analysis, project *stor
 
 	model.currentProject = project
 
-	p := tea.NewProgram(model)
+	p := tea.NewProgram(model, tea.WithMouseCellMotion())
 	if _, err := p.Run(); err != nil {
 		logger.Error("Error running interactive mode", logger.Err(err))
 		os.Exit(1)
 	}
 }
-

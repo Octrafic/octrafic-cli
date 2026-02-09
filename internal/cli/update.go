@@ -1,20 +1,20 @@
 package cli
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/Octrafic/octrafic-cli/internal/agents"
 	"github.com/Octrafic/octrafic-cli/internal/core/auth"
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"github.com/Octrafic/octrafic-cli/internal/updater"
-	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"go.uber.org/zap"
-	"github.com/charmbracelet/bubbles/spinner"
 )
 
 type releaseNotesMsg struct {
@@ -28,6 +28,10 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		m.viewport, cmd = m.viewport.Update(msg)
+		return m, cmd
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height

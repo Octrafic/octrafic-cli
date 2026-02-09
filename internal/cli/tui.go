@@ -1,14 +1,14 @@
 package cli
 
 import (
+	"fmt"
+	"github.com/Octrafic/octrafic-cli/internal/agents"
 	"github.com/Octrafic/octrafic-cli/internal/config"
 	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
-	"github.com/Octrafic/octrafic-cli/internal/agents"
 	"github.com/Octrafic/octrafic-cli/internal/core/auth"
-	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"github.com/Octrafic/octrafic-cli/internal/core/tester"
+	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"github.com/Octrafic/octrafic-cli/internal/updater"
-	"fmt"
 	"strings"
 	"time"
 
@@ -116,28 +116,28 @@ type showTestSelectionMsg struct {
 
 // TestUIModel represents the test UI state
 type TestUIModel struct {
-	analysis      *analyzer.Analysis
-	baseURL       string
-	specPath      string // Path to spec file for SearchSpec
+	analysis       *analyzer.Analysis
+	baseURL        string
+	specPath       string           // Path to spec file for SearchSpec
 	currentProject *storage.Project // Currently active project
-	localAgent    *agent.Agent
-	testExecutor  *tester.Executor
-	authProvider  auth.AuthProvider
+	localAgent     *agent.Agent
+	testExecutor   *tester.Executor
+	authProvider   auth.AuthProvider
 
 	// Agent state
-	agentState           AgentState
-	executionMode        ExecutionMode
-	thinkingEnabled      bool   // Whether to use /think tag for reasoning
-	lastMessageRole      string // Track who sent the last message ("user" or "assistant")
+	agentState               AgentState
+	executionMode            ExecutionMode
+	thinkingEnabled          bool   // Whether to use /think tag for reasoning
+	lastMessageRole          string // Track who sent the last message ("user" or "assistant")
 	conversationHistory      []agent.ChatMessage
 	currentToolCall          *agent.ToolCall
 	pendingToolCall          *agent.ToolCall
-	pendingTestGroupToolCall *agent.ToolCall // Saved ExecuteTestGroup tool call for test selection
-	streamedToolCalls      []agent.ToolCall // Tool calls received from stream, processed when DONE
-	streamedAgentMessage   string             // Agent message received from stream, saved to history when DONE
-	streamedReasoningChunk string
-	streamedTextChunk      string
-	confirmationChoice     int
+	pendingTestGroupToolCall *agent.ToolCall  // Saved ExecuteTestGroup tool call for test selection
+	streamedToolCalls        []agent.ToolCall // Tool calls received from stream, processed when DONE
+	streamedAgentMessage     string           // Agent message received from stream, saved to history when DONE
+	streamedReasoningChunk   string
+	streamedTextChunk        string
+	confirmationChoice       int
 
 	// Command suggestions
 	filteredCommands     []Command
@@ -151,14 +151,14 @@ type TestUIModel struct {
 	messages []string
 
 	// Input
-	textarea          textarea.Model
-	lastEscPress      time.Time // Track last ESC press for double-ESC detection
-	showClearHint     bool      // Show "Press ESC again to clear" hint
+	textarea      textarea.Model
+	lastEscPress  time.Time // Track last ESC press for double-ESC detection
+	showClearHint bool      // Show "Press ESC again to clear" hint
 
 	// Command history
-	commandHistory   []string // List of previous commands
-	historyIndex     int      // Current position in history (-1 = not browsing)
-	temporaryInput   string   // Temporary storage for current input while browsing history
+	commandHistory []string // List of previous commands
+	historyIndex   int      // Current position in history (-1 = not browsing)
+	temporaryInput string   // Temporary storage for current input while browsing history
 
 	// Spinner
 	spinner spinner.Model
@@ -171,15 +171,15 @@ type TestUIModel struct {
 	outputTokens int64
 
 	// Tests
-	tests               []Test
-	selectedTestIndex   int
-	totalTestsInProgress int
-	pendingTests        []map[string]any
-	currentTestGroupLabel string // Header for test group (e.g., "Testing users api")
-	testGroupCompletedCount int // Number of tests completed in current group
-	testGroupResults    []map[string]any // Results from current test group for FunctionResponse
-	currentTestToolName string // Name of the tool being executed (e.g., "ExecuteTestGroup")
-	currentTestToolID   string // ID of the tool_use for FunctionResponse
+	tests                   []Test
+	selectedTestIndex       int
+	totalTestsInProgress    int
+	pendingTests            []map[string]any
+	currentTestGroupLabel   string           // Header for test group (e.g., "Testing users api")
+	testGroupCompletedCount int              // Number of tests completed in current group
+	testGroupResults        []map[string]any // Results from current test group for FunctionResponse
+	currentTestToolName     string           // Name of the tool being executed (e.g., "ExecuteTestGroup")
+	currentTestToolID       string           // ID of the tool_use for FunctionResponse
 
 	// Version
 	currentVersion string
@@ -214,6 +214,8 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 
 	// Viewport - will be resized on first WindowSizeMsg
 	vp := viewport.New(120, 20)
+	vp.MouseWheelEnabled = true
+	vp.MouseWheelDelta = 3
 
 	// Spinner
 	s := spinner.New()
@@ -380,7 +382,7 @@ func (m TestUIModel) View() string {
 		return s.String()
 	}
 
-// Show confirmation dialog or text input
+	// Show confirmation dialog or text input
 	if m.agentState == StateAskingConfirmation {
 		// Show tool confirmation dialog with details
 		toolName := "Unknown"
