@@ -14,15 +14,12 @@
 
       <div v-if="showDropdown" class="dropdown-menu">
         <button @click="askChatGPT" class="dropdown-item chatgpt-item">
-          <img src="/openai.svg" alt="ChatGPT" class="ai-logo" />
           <span>ChatGPT</span>
         </button>
         <button @click="askClaude" class="dropdown-item claude-item">
-          <img src="/claude.svg" alt="Claude" class="ai-logo" />
           <span>Claude</span>
         </button>
         <button @click="askPerplexity" class="dropdown-item perplexity-item">
-          <img src="/perplexity.svg" alt="Perplexity" class="ai-logo" />
           <span>Perplexity</span>
         </button>
       </div>
@@ -195,7 +192,6 @@ onUnmounted(() => {
 .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 10px;
   width: 100%;
   padding: 10px 12px;
   font-size: 14px;
@@ -207,48 +203,8 @@ onUnmounted(() => {
   text-align: left;
 }
 
-.ai-logo {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  transition: filter 0.2s;
-}
-
-.chatgpt-item .ai-logo {
-  filter: invert(47%) sepia(82%) saturate(450%) hue-rotate(121deg) brightness(95%) contrast(92%);
-}
-
-.chatgpt-item:hover {
-  background: rgba(16, 163, 127, 0.1);
-}
-
-.claude-item .ai-logo {
-  filter: invert(59%) sepia(17%) saturate(1289%) hue-rotate(333deg) brightness(91%) contrast(87%);
-}
-
-.claude-item:hover {
-  background: rgba(204, 120, 92, 0.1);
-}
-
-.perplexity-item .ai-logo {
-  filter: invert(62%) sepia(71%) saturate(1691%) hue-rotate(151deg) brightness(93%) contrast(101%);
-}
-
-.perplexity-item:hover {
-  background: rgba(31, 184, 205, 0.1);
-}
-
-/* Dark mode adjustments for logos */
-.dark .chatgpt-item .ai-logo {
-  filter: invert(67%) sepia(35%) saturate(1021%) hue-rotate(121deg) brightness(95%) contrast(92%);
-}
-
-.dark .claude-item .ai-logo {
-  filter: invert(69%) sepia(17%) saturate(1289%) hue-rotate(333deg) brightness(91%) contrast(87%);
-}
-
-.dark .perplexity-item .ai-logo {
-  filter: invert(72%) sepia(71%) saturate(1691%) hue-rotate(151deg) brightness(93%) contrast(101%);
+.dropdown-item:hover {
+  background: var(--vp-c-bg-soft);
 }
 
 .notification {
