@@ -13,7 +13,7 @@ export default defineConfig({
 
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
-    logo: '/octrafic-logo.png',
+    logo: 'https://octrafic.com/octrafic-logo.png',
     siteTitle: 'Octrafic',
 
     nav: [
