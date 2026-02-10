@@ -43,6 +43,7 @@ func (m *TestUIModel) sendChatMessage(_ string) tea.Cmd {
 		time.Sleep(100 * time.Millisecond)
 
 		streamChan := make(chan string, 100)
+		cancelChan := m.cancelStream
 
 		go func() {
 			defer close(streamChan)
@@ -63,35 +64,77 @@ func (m *TestUIModel) sendChatMessage(_ string) tea.Cmd {
 				}
 			}
 
-			response, err := m.localAgent.ChatStream(m.conversationHistory, m.thinkingEnabled,
-				func(chunk string, isThought bool) {
-					// Send chunk with isThought flag
-					if isThought {
-						logger.Debug("Received THINK chunk", logger.String("chunk", chunk[:min(len(chunk), 50)]+"..."))
-						streamChan <- "\x00THINK:" + chunk
-					} else {
-						logger.Debug("Received TEXT chunk", logger.String("chunk", chunk[:min(len(chunk), 50)]+"..."))
-						streamChan <- "\x00TEXT:" + chunk
-					}
-				}, endpointsList)
+			// Run ChatStream in separate goroutine so we can cancel
+			type chatResult struct {
+				response *agent.ChatResponse
+				err      error
+			}
+			resultChan := make(chan chatResult, 1)
 
-			if err != nil {
-				logger.Error("ChatStream failed", logger.Err(err))
-				streamChan <- "\x00ERROR:" + err.Error()
-			} else {
-				logger.Info("ChatStream completed",
-					zap.Int64("input_tokens", response.InputTokens),
-					zap.Int64("output_tokens", response.OutputTokens),
-					logger.String("message_preview", response.Message[:min(len(response.Message), 100)]+"..."))
-				streamChan <- "\x00AGENT:" + response.Message
-				if len(response.ToolCalls) > 0 {
-					logger.Debug("Tool calls received", zap.Int("count", len(response.ToolCalls)))
-					toolCallsJSON, _ := json.Marshal(response.ToolCalls)
-					streamChan <- "\x00TOOLS:" + string(toolCallsJSON)
+			go func() {
+				resp, err := m.localAgent.ChatStream(m.conversationHistory, m.thinkingEnabled,
+					func(chunk string, isThought bool) {
+						// Check if stream was cancelled
+						select {
+						case <-cancelChan:
+							return
+						default:
+						}
+
+						// Send chunk with isThought flag
+						if isThought {
+							logger.Debug("Received THINK chunk", logger.String("chunk", chunk[:min(len(chunk), 50)]+"..."))
+							select {
+							case streamChan <- "\x00THINK:" + chunk:
+							case <-cancelChan:
+								return
+							}
+						} else {
+							logger.Debug("Received TEXT chunk", logger.String("chunk", chunk[:min(len(chunk), 50)]+"..."))
+							select {
+							case streamChan <- "\x00TEXT:" + chunk:
+							case <-cancelChan:
+								return
+							}
+						}
+					}, endpointsList)
+				resultChan <- chatResult{response: resp, err: err}
+			}()
+
+			// Wait for either completion or cancellation
+			select {
+			case <-cancelChan:
+				logger.Info("ChatStream cancelled by user")
+				streamChan <- "\x00CANCELLED:"
+				return
+			case result := <-resultChan:
+				// Check again if cancelled during processing
+				select {
+				case <-cancelChan:
+					logger.Info("ChatStream cancelled by user")
+					streamChan <- "\x00CANCELLED:"
+					return
+				default:
 				}
-				tokenData := fmt.Sprintf("%d,%d", response.InputTokens, response.OutputTokens)
-				streamChan <- "\x00TOKENS:" + tokenData
-				streamChan <- "\x00DONE:"
+
+				if result.err != nil {
+					logger.Error("ChatStream failed", logger.Err(result.err))
+					streamChan <- "\x00ERROR:" + result.err.Error()
+				} else {
+					logger.Info("ChatStream completed",
+						zap.Int64("input_tokens", result.response.InputTokens),
+						zap.Int64("output_tokens", result.response.OutputTokens),
+						logger.String("message_preview", result.response.Message[:min(len(result.response.Message), 100)]+"..."))
+					streamChan <- "\x00AGENT:" + result.response.Message
+					if len(result.response.ToolCalls) > 0 {
+						logger.Debug("Tool calls received", zap.Int("count", len(result.response.ToolCalls)))
+						toolCallsJSON, _ := json.Marshal(result.response.ToolCalls)
+						streamChan <- "\x00TOOLS:" + string(toolCallsJSON)
+					}
+					tokenData := fmt.Sprintf("%d,%d", result.response.InputTokens, result.response.OutputTokens)
+					streamChan <- "\x00TOKENS:" + tokenData
+					streamChan <- "\x00DONE:"
+				}
 			}
 		}()
 
