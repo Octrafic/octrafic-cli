@@ -138,6 +138,7 @@ type TestUIModel struct {
 	streamedReasoningChunk   string
 	streamedTextChunk        string
 	confirmationChoice       int
+	cancelStream             chan struct{} // Channel to cancel ongoing stream
 
 	// Command suggestions
 	filteredCommands     []Command

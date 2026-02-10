@@ -206,7 +206,6 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Render("> ") + userInput
 					m.addMessage("")
 					m.addMessage(userMessage)
-					m.addMessage("")
 
 					m.lastMessageRole = "user"
 
@@ -214,6 +213,9 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Role:    "user",
 						Content: userInput,
 					})
+
+					// Create new cancel channel for this stream
+					m.cancelStream = make(chan struct{})
 
 					m.agentState = StateProcessing
 					m.animationFrame = 0
@@ -360,6 +362,7 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		displayedContent := false
 		if m.streamedTextChunk != "" {
 			logger.Debug("Displaying accumulated content", zap.Int("length", len(m.streamedTextChunk)))
+			m.addMessage("")
 			m.addMessage(renderMarkdown(m.streamedTextChunk))
 			m.updateViewport()
 			m.streamedTextChunk = ""
@@ -370,6 +373,7 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		if agentMsg != "" && !displayedContent {
 			logger.Debug("Displaying agent message", zap.Int("length", len(agentMsg)))
 			m.streamedAgentMessage = agentMsg
+			m.addMessage("")
 			m.addMessage(renderMarkdown(agentMsg))
 			m.updateViewport()
 		}
@@ -386,6 +390,7 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 	} else if strings.HasPrefix(msg.chunk, "\x00DONE:") {
 		// Display any accumulated content before finishing
 		if m.streamedTextChunk != "" {
+			m.addMessage("")
 			m.addMessage(renderMarkdown(m.streamedTextChunk))
 			m.updateViewport()
 		}
@@ -432,6 +437,22 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		chunk := strings.TrimPrefix(msg.chunk, "\x00TEXT:")
 		m.streamedTextChunk += chunk
 		return m, waitForReasoning(msg.channel)
+	} else if strings.HasPrefix(msg.chunk, "\x00CANCELLED:") {
+		// Stream was cancelled - display accumulated content and stop
+		if m.streamedTextChunk != "" {
+			m.addMessage("")
+			m.addMessage(renderMarkdown(m.streamedTextChunk))
+			m.updateViewport()
+		}
+		
+		// Message already saved to history in handleGlobalKeyboard
+		m.streamedReasoningChunk = ""
+		m.streamedTextChunk = ""
+		m.streamedAgentMessage = ""
+		m.streamedToolCalls = nil
+		
+		m.agentState = StateIdle
+		return m, nil
 	}
 
 	// Fallback for unknown chunk types - just continue waiting
@@ -446,6 +467,32 @@ func handleGlobalKeyboard(m *TestUIModel, msg tea.KeyMsg) (*TestUIModel, tea.Cmd
 
 	if msg.Type == tea.KeyEsc {
 		if m.agentState != StateIdle {
+			// Cancel ongoing stream if processing
+			if m.agentState == StateProcessing || m.agentState == StateThinking {
+				if m.cancelStream != nil {
+					close(m.cancelStream)
+					m.cancelStream = nil
+				}
+				
+				// Save partial response to history
+				if m.streamedTextChunk != "" || m.streamedAgentMessage != "" {
+					content := m.streamedTextChunk
+					if content == "" {
+						content = m.streamedAgentMessage
+					}
+					m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+						Role:    "assistant",
+						Content: content,
+					})
+				}
+				
+				// Reset streaming state
+				m.streamedReasoningChunk = ""
+				m.streamedTextChunk = ""
+				m.streamedAgentMessage = ""
+				m.streamedToolCalls = nil
+			}
+			
 			m.agentState = StateIdle
 			m.currentToolCall = nil
 			m.pendingToolCall = nil
@@ -869,6 +916,7 @@ func handleCommandsState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // showToolWidget displays a tool execution widget with title and details
 func showToolWidget(m *TestUIModel, title string, details string) {
+	m.addMessage("")
 	bullet := lipgloss.NewStyle().Foreground(Theme.Primary).Render("➔")
 	m.addMessage(fmt.Sprintf("%s %s", bullet, title))
 	if details != "" {
