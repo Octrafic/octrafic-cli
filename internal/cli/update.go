@@ -444,13 +444,13 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 			m.addMessage(renderMarkdown(m.streamedTextChunk))
 			m.updateViewport()
 		}
-		
+
 		// Message already saved to history in handleGlobalKeyboard
 		m.streamedReasoningChunk = ""
 		m.streamedTextChunk = ""
 		m.streamedAgentMessage = ""
 		m.streamedToolCalls = nil
-		
+
 		m.agentState = StateIdle
 		return m, nil
 	}
@@ -473,7 +473,7 @@ func handleGlobalKeyboard(m *TestUIModel, msg tea.KeyMsg) (*TestUIModel, tea.Cmd
 					close(m.cancelStream)
 					m.cancelStream = nil
 				}
-				
+
 				// Save partial response to history
 				if m.streamedTextChunk != "" || m.streamedAgentMessage != "" {
 					content := m.streamedTextChunk
@@ -485,14 +485,14 @@ func handleGlobalKeyboard(m *TestUIModel, msg tea.KeyMsg) (*TestUIModel, tea.Cmd
 						Content: content,
 					})
 				}
-				
+
 				// Reset streaming state
 				m.streamedReasoningChunk = ""
 				m.streamedTextChunk = ""
 				m.streamedAgentMessage = ""
 				m.streamedToolCalls = nil
 			}
-			
+
 			m.agentState = StateIdle
 			m.currentToolCall = nil
 			m.pendingToolCall = nil

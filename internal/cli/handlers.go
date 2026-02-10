@@ -80,7 +80,7 @@ func (m *TestUIModel) sendChatMessage(_ string) tea.Cmd {
 							return
 						default:
 						}
-						
+
 						// Send chunk with isThought flag
 						if isThought {
 							logger.Debug("Received THINK chunk", logger.String("chunk", chunk[:min(len(chunk), 50)]+"..."))
