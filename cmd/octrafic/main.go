@@ -534,8 +534,6 @@ func loadAndStartProject(project *storage.Project) {
 		}
 	}
 
-	fmt.Printf("🚀 Loading project: %s\n", project.Name)
-
 	cli.StartWithProject(project.BaseURL, analysis, project, authProvider, version)
 }
 
