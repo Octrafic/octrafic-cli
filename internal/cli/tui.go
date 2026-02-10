@@ -196,6 +196,7 @@ type TestUIModel struct {
 	userStyle    lipgloss.Style
 	agentStyle   lipgloss.Style
 	toolStyle    lipgloss.Style
+	borderStyle  lipgloss.Style
 
 	width  int
 	height int
@@ -208,8 +209,10 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 	ta.Focus()
 	ta.ShowLineNumbers = false
 	ta.SetHeight(1) // Start with 1 line, will grow to max 6
+	ta.Prompt = ""  // Remove prompt line
 	// Remove cursor line highlighting
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
+	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(Theme.TextSubtle).Italic(true)
 	// Keep default Enter behavior for newlines (textarea handles it)
 	// Ctrl+Enter will be used to send messages (handled in Update)
 
@@ -262,6 +265,7 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 		userStyle:           lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true),
 		agentStyle:          lipgloss.NewStyle().Foreground(Theme.Primary),
 		toolStyle:           lipgloss.NewStyle().Foreground(Theme.Warning),
+		borderStyle:         lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(Theme.Primary).Padding(0, 1),
 	}
 
 	model.currentVersion = version
@@ -474,8 +478,8 @@ func (m TestUIModel) View() string {
 
 		s.WriteString(icon + " " + statusMsg + tokenDisplay + updateDisplay + "\n")
 
-		// Input AFTER status line
-		s.WriteString(m.textarea.View() + "\n")
+		// Input AFTER status line (with border)
+		s.WriteString(m.borderStyle.Render(m.textarea.View()) + "\n")
 
 		// Command suggestions (if showing)
 		if m.agentState == StateShowingCommands && len(m.filteredCommands) > 0 {

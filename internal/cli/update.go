@@ -36,8 +36,9 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.viewport.Width = msg.Width - 4
-		m.viewport.Height = msg.Height - 4
-		m.textarea.SetWidth(msg.Width - 4)
+		// Account for border (2 lines) + status line + help text + spacing
+		m.viewport.Height = msg.Height - 7
+		m.textarea.SetWidth(msg.Width - 8) // Account for border padding (2 chars each side)
 		m.updateViewport()
 
 	case streamReasoningMsg:
