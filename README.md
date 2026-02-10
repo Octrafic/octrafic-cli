@@ -83,6 +83,8 @@ octrafic -n "My API"
 
 **Your credentials never leave your machine** - they're sent only to your API, not to AI providers.
 
+### CLI Flags
+
 ```bash
 # Bearer token
 octrafic -u https://api.example.com -s spec.json --auth bearer --token "TOKEN"
@@ -93,6 +95,31 @@ octrafic -u https://api.example.com -s spec.json --auth apikey --key "X-API-Key"
 # Basic auth
 octrafic -u https://api.example.com -s spec.json --auth basic --user "user" --pass "pass"
 ```
+
+### Environment Variables
+
+For safer credential management, use environment variables instead of CLI flags:
+
+```bash
+# Bearer token
+export OCTRAFIC_AUTH_TYPE=bearer
+export OCTRAFIC_AUTH_TOKEN=my-secret-token
+octrafic -u https://api.example.com -s spec.json
+
+# API key
+export OCTRAFIC_AUTH_TYPE=apikey
+export OCTRAFIC_AUTH_KEY=X-API-Key
+export OCTRAFIC_AUTH_VALUE=my-api-key
+octrafic -u https://api.example.com -s spec.json
+
+# Basic auth
+export OCTRAFIC_AUTH_TYPE=basic
+export OCTRAFIC_AUTH_USER=username
+export OCTRAFIC_AUTH_PASS=password
+octrafic -u https://api.example.com -s spec.json
+```
+
+**Priority:** CLI flags override environment variables, which override saved project auth.
 
 Auth is saved automatically with named projects (`-n`). Change during session with `/auth` command.
 
