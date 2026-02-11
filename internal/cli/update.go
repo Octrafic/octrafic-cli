@@ -121,14 +121,12 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case releaseNotesMsg:
 		if msg.err != nil {
 			m.addMessage(m.errorStyle.Render("Failed to fetch release notes: " + msg.err.Error()))
-			m.addMessage("")
 		} else {
 			m.addMessage(renderMarkdown(msg.notes))
 			if msg.url != "" {
 				m.addMessage("")
 				m.addMessage(lipgloss.NewStyle().Foreground(Theme.Cyan).Render(msg.url))
 			}
-			m.addMessage("")
 		}
 		m.lastMessageRole = "assistant"
 		m.updateViewport()
@@ -535,56 +533,116 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 
 	switch userInput {
 	case "/think":
+		// Show command as user message
+		m.addMessage("")
+		m.addMessage(renderUserLabel() + " " + userInput)
+		m.addMessage("")
+		m.lastMessageRole = "user"
+
 		m.thinkingEnabled = !m.thinkingEnabled
+		status := "disabled"
+		if m.thinkingEnabled {
+			status = "enabled"
+		}
+		m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ Thinking mode %s", status)))
+		m.lastMessageRole = "assistant"
 		return m, nil, true
 
 	case "/clear":
+		// Show command as user message
+		m.addMessage("")
+		m.addMessage(renderUserLabel() + " " + userInput)
+		m.addMessage("")
+		m.lastMessageRole = "user"
+
+		m.addMessage(m.successStyle.Render("✓ Conversation cleared"))
+		m.lastMessageRole = "assistant"
+
+		// Clear conversation and recreate header
 		m.conversationHistory = []agent.ChatMessage{}
 		m.recreateHeader()
 		return m, nil, true
 
 	case "/help":
-		m.addAgentMessage(m.agentStyle.Render("Available commands:"))
+		// Show command as user message
+		m.addMessage("")
+		m.addMessage(renderUserLabel() + " " + userInput)
+		m.addMessage("")
+		m.lastMessageRole = "user"
+
+		// Show response
+		m.addMessage(m.agentStyle.Render("Available commands:"))
 		for _, cmd := range availableCommands {
 			m.addMessage(lipgloss.NewStyle().Foreground(Theme.Primary).Render(cmd.Name) + " - " + cmd.Description)
 		}
-		m.addMessage("")
+		m.lastMessageRole = "assistant"
 		return m, nil, true
 
 	case "/logout":
+		// Show command as user message
+		m.addMessage("")
+		m.addMessage(renderUserLabel() + " " + userInput)
+		m.addMessage("")
+		m.lastMessageRole = "user"
+
 		if err := storage.ClearSession(); err != nil {
-			m.addAgentMessage(m.errorStyle.Render("Failed to logout: " + err.Error()))
+			m.addMessage(m.errorStyle.Render("Failed to logout: " + err.Error()))
 		} else {
-			m.addAgentMessage(m.successStyle.Render("✓ Logged out successfully"))
+			m.addMessage(m.successStyle.Render("✓ Logged out successfully"))
 			m.addMessage(m.subtleStyle.Render("Restart the CLI to login again"))
 		}
-		m.addMessage("")
+		m.lastMessageRole = "assistant"
 		return m, nil, true
 
 	case "/exit":
+		// Show command as user message
+		m.addMessage("")
+		m.addMessage(renderUserLabel() + " " + userInput)
+		m.addMessage("")
+		m.addMessage(m.subtleStyle.Render("Goodbye!"))
 		return m, tea.Quit, true
 
 	case "/auth":
+		// Show command as user message
+		m.addMessage("")
+		m.addMessage(renderUserLabel() + " " + userInput)
+		m.addMessage("")
+		m.lastMessageRole = "user"
+
+		m.addMessage(m.subtleStyle.Render("Opening authentication wizard..."))
+		m.lastMessageRole = "assistant"
+
 		m.wizardState = NewAuthWizard()
 		m.agentState = StateWizard
 		return m, nil, true
 
 	case "/release-notes":
-		m.addAgentMessage(m.subtleStyle.Render("Fetching release notes..."))
+		// Show command as user message
 		m.addMessage("")
-		return m, func() tea.Msg {
+		m.addMessage(renderUserLabel() + " " + userInput)
+		m.addMessage("")
+		m.lastMessageRole = "user"
+
+		cmd := func() tea.Msg {
 			notes, url, err := updater.FetchReleaseNotes("")
 			return releaseNotesMsg{notes: notes, url: url, err: err}
-		}, true
+		}
+		return m, cmd, true
 
 	case "/info":
+		// Show command as user message
+		m.addMessage("")
+		m.addMessage(renderUserLabel() + " " + userInput)
+		m.addMessage("")
+		m.lastMessageRole = "user"
+
 		if m.currentProject == nil {
-			m.addAgentMessage(m.subtleStyle.Render("No active project"))
-			m.addMessage("")
+			m.addMessage(m.subtleStyle.Render("No active project"))
+			m.lastMessageRole = "assistant"
 			return m, nil, true
 		}
 
-		m.addAgentMessage(m.agentStyle.Render(fmt.Sprintf("📁 Project: %s", m.currentProject.Name)))
+		m.addMessage(m.agentStyle.Render(fmt.Sprintf("Project: %s", m.currentProject.Name)))
 		m.addMessage(fmt.Sprintf("  ID: %s", m.currentProject.ID))
 		m.addMessage(fmt.Sprintf("  URL: %s", m.currentProject.BaseURL))
 		if m.currentProject.SpecPath != "" {
@@ -594,7 +652,7 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 			}
 		}
 		m.addMessage(m.subtleStyle.Render(fmt.Sprintf("  Created: %s", m.currentProject.CreatedAt.Format("2006-01-02 15:04"))))
-		m.addMessage("")
+		m.lastMessageRole = "assistant"
 		return m, nil, true
 	}
 
@@ -607,11 +665,17 @@ func handleAuthCommand(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd,
 		return m, nil, false
 	}
 
+	// Show command as user message
+	m.addMessage("")
+	m.addMessage(renderUserLabel() + " " + userInput)
+	m.addMessage("")
+	m.lastMessageRole = "user"
+
 	parts := strings.Fields(userInput)
 	if len(parts) < 2 {
-		m.addAgentMessage(m.errorStyle.Render("Usage: auth <command>"))
+		m.addMessage(m.errorStyle.Render("Usage: auth <command>"))
 		m.addMessage(m.subtleStyle.Render("Commands: bearer <token> | apikey <key> <value> | basic <user> <pass> | show | clear"))
-		m.addMessage("")
+		m.lastMessageRole = "assistant"
 		return m, nil, true
 	}
 
@@ -619,66 +683,66 @@ func handleAuthCommand(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd,
 	switch subCmd {
 	case "bearer":
 		if len(parts) < 3 {
-			m.addAgentMessage(m.errorStyle.Render("Usage: auth bearer <token>"))
-			m.addMessage("")
+			m.addMessage(m.errorStyle.Render("Usage: auth bearer <token>"))
+			m.lastMessageRole = "assistant"
 			return m, nil, true
 		}
 		m.authProvider = auth.NewBearerAuth(parts[2])
 		m.testExecutor.UpdateAuthProvider(m.authProvider)
-		m.addAgentMessage(m.successStyle.Render("✓ Bearer authentication configured"))
-		m.addMessage("")
+		m.addMessage(m.successStyle.Render("✓ Bearer authentication configured"))
+		m.lastMessageRole = "assistant"
 		return m, nil, true
 
 	case "apikey":
 		if len(parts) < 4 {
-			m.addAgentMessage(m.errorStyle.Render("Usage: auth apikey <key> <value>"))
+			m.addMessage(m.errorStyle.Render("Usage: auth apikey <key> <value>"))
 			m.addMessage(m.subtleStyle.Render("Example: auth apikey X-API-Key your-key-here"))
-			m.addMessage("")
+			m.lastMessageRole = "assistant"
 			return m, nil, true
 		}
 		m.authProvider = auth.NewAPIKeyAuth(parts[2], parts[3], "header")
 		m.testExecutor.UpdateAuthProvider(m.authProvider)
-		m.addAgentMessage(m.successStyle.Render(fmt.Sprintf("✓ API Key authentication configured (%s)", parts[2])))
-		m.addMessage("")
+		m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ API Key authentication configured (%s)", parts[2])))
+		m.lastMessageRole = "assistant"
 		return m, nil, true
 
 	case "basic":
 		if len(parts) < 4 {
-			m.addAgentMessage(m.errorStyle.Render("Usage: auth basic <username> <password>"))
-			m.addMessage("")
+			m.addMessage(m.errorStyle.Render("Usage: auth basic <username> <password>"))
+			m.lastMessageRole = "assistant"
 			return m, nil, true
 		}
 		m.authProvider = auth.NewBasicAuth(parts[2], parts[3])
 		m.testExecutor.UpdateAuthProvider(m.authProvider)
-		m.addAgentMessage(m.successStyle.Render(fmt.Sprintf("✓ Basic authentication configured (%s)", parts[2])))
-		m.addMessage("")
+		m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ Basic authentication configured (%s)", parts[2])))
+		m.lastMessageRole = "assistant"
 		return m, nil, true
 
 	case "show":
 		if m.authProvider == nil {
-			m.addAgentMessage(m.subtleStyle.Render("No authentication configured"))
+			m.addMessage(m.subtleStyle.Render("No authentication configured"))
 		} else {
 			redacted := m.authProvider.Redact()
 			if stringer, ok := redacted.(fmt.Stringer); ok {
-				m.addAgentMessage(m.subtleStyle.Render("Current auth: " + stringer.String()))
+				m.addMessage(m.subtleStyle.Render("Current auth: " + stringer.String()))
 			} else {
-				m.addAgentMessage(m.subtleStyle.Render(fmt.Sprintf("Current auth: %s", redacted.Type())))
+				m.addMessage(m.subtleStyle.Render(fmt.Sprintf("Current auth: %s", redacted.Type())))
 			}
 		}
-		m.addMessage("")
+		m.lastMessageRole = "assistant"
 		return m, nil, true
 
 	case "clear":
 		m.authProvider = &auth.NoAuth{}
 		m.testExecutor.UpdateAuthProvider(m.authProvider)
-		m.addAgentMessage(m.successStyle.Render("✓ Authentication cleared"))
-		m.addMessage("")
+		m.addMessage(m.successStyle.Render("✓ Authentication cleared"))
+		m.lastMessageRole = "assistant"
 		return m, nil, true
 
 	default:
-		m.addAgentMessage(m.errorStyle.Render(fmt.Sprintf("Unknown auth command: %s", subCmd)))
+		m.addMessage(m.errorStyle.Render(fmt.Sprintf("Unknown auth command: %s", subCmd)))
 		m.addMessage(m.subtleStyle.Render("Commands: bearer | apikey | basic | show | clear"))
-		m.addMessage("")
+		m.lastMessageRole = "assistant"
 		return m, nil, true
 	}
 }

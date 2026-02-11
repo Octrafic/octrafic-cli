@@ -29,6 +29,12 @@ func renderAgentLabel() string {
 	return result
 }
 
+func renderUserLabel() string {
+	return lipgloss.NewStyle().
+		Foreground(Theme.TextMuted).
+		Render(">")
+}
+
 func filterCommands(input string) []Command {
 	var filtered []Command
 	lowerInput := strings.ToLower(input)
@@ -95,11 +101,6 @@ func (m *TestUIModel) shouldAskForConfirmation(toolName string) bool {
 	return !safeTools[toolName]
 }
 
-func (m *TestUIModel) addAgentMessage(msg string) tea.Cmd {
-	m.lastMessageRole = "assistant"
-	return tea.Println(msg)
-}
-
 func (m *TestUIModel) addMessage(msg string) tea.Cmd {
 	m.messages = append(m.messages, msg)
 	m.updateViewport()
@@ -123,34 +124,46 @@ func (m *TestUIModel) updateViewport() {
 }
 
 func renderMarkdown(content string) string {
+	// Normalize line endings (GitHub API returns \r\n)
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.ReplaceAll(content, "\r", "\n")
+
 	lines := strings.Split(content, "\n")
 	var rendered []string
 
-	h1Style := lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true)
-	h2Style := lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true)
-	h3Style := lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true)
-	h4Style := lipgloss.NewStyle().Foreground(Theme.Blue).Bold(true)
-	h5Style := lipgloss.NewStyle().Foreground(Theme.BlueLight)
-	h6Style := lipgloss.NewStyle().Foreground(Theme.CyanLight)
 	boldStyle := lipgloss.NewStyle().Bold(true)
 	codeStyle := lipgloss.NewStyle().Foreground(Theme.Success).Background(Theme.BgCode)
+	headerStyle := lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true)
 
 	for _, line := range lines {
 		result := line
+		isHeader := false
 
-		// Headers - check from longest to shortest to avoid mismatches
-		if strings.HasPrefix(result, "###### ") {
-			result = h6Style.Render(strings.TrimPrefix(result, "###### "))
-		} else if strings.HasPrefix(result, "##### ") {
-			result = h5Style.Render(strings.TrimPrefix(result, "##### "))
-		} else if strings.HasPrefix(result, "#### ") {
-			result = h4Style.Render(strings.TrimPrefix(result, "#### "))
-		} else if strings.HasPrefix(result, "### ") {
-			result = h3Style.Render(strings.TrimPrefix(result, "### "))
-		} else if strings.HasPrefix(result, "## ") {
-			result = h2Style.Render(strings.TrimPrefix(result, "## "))
-		} else if strings.HasPrefix(result, "# ") {
-			result = h1Style.Render(strings.TrimPrefix(result, "# "))
+		// Headers - remove hashtags and style
+		if strings.HasPrefix(line, "###### ") {
+			result = headerStyle.Render(strings.TrimPrefix(line, "###### "))
+			isHeader = true
+		} else if strings.HasPrefix(line, "##### ") {
+			result = headerStyle.Render(strings.TrimPrefix(line, "##### "))
+			isHeader = true
+		} else if strings.HasPrefix(line, "#### ") {
+			result = headerStyle.Render(strings.TrimPrefix(line, "#### "))
+			isHeader = true
+		} else if strings.HasPrefix(line, "### ") {
+			result = headerStyle.Render(strings.TrimPrefix(line, "### "))
+			isHeader = true
+		} else if strings.HasPrefix(line, "## ") {
+			result = headerStyle.Render(strings.TrimPrefix(line, "## "))
+			isHeader = true
+		} else if strings.HasPrefix(line, "# ") {
+			result = headerStyle.Render(strings.TrimPrefix(line, "# "))
+			isHeader = true
+		}
+
+		// Skip further processing for headers
+		if isHeader {
+			rendered = append(rendered, result)
+			continue
 		}
 
 		if strings.HasPrefix(strings.TrimSpace(result), "- ") || strings.HasPrefix(strings.TrimSpace(result), "* ") {
