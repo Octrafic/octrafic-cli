@@ -22,7 +22,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           config.model: "openrouter/anthropic/claude-haiku-4.5"
-          OPENROUTER.API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_API_BASE: "https://openrouter.ai/api/v1"
           config.custom_model_max_tokens: "200000"
           config.ai_timeout: "120"
           
