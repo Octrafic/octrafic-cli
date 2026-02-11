@@ -13,6 +13,7 @@ import (
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"github.com/Octrafic/octrafic-cli/internal/updater"
 	"os"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -54,10 +55,17 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "octrafic",
-	Short: "Octrafic - AI-powered API testing tool",
-	Long:  `Octrafic is an intelligent API testing tool that uses AI to generate and execute tests.`,
-	Args:  cobra.NoArgs,
+	Short: "AI-powered CLI tool for API testing and exploration",
+	Long: `AI-powered CLI tool for API testing and exploration.
+Chat naturally with your APIs - no scripts, no configuration files, just conversation.`,
+	SilenceErrors: true,
+	SilenceUsage:  true,
 	Run: func(cmd *cobra.Command, args []string) {
+		// Check for unknown arguments (subcommands)
+		if len(args) > 0 {
+			printCustomHelp(cmd)
+			os.Exit(1)
+		}
 		if forceOnboarding {
 			completed := runOnboarding()
 			if !completed {
@@ -195,6 +203,120 @@ var rootCmd = &cobra.Command{
 
 		cli.StartWithProject(apiURL, analysis, project, authProvider, version)
 	},
+}
+
+// Custom help function with grouped flags
+func printCustomHelp(cmd *cobra.Command) {
+	fmt.Printf("AI-powered CLI tool for API testing and exploration\n\n")
+	fmt.Printf("Usage:\n  %s\n\n", cmd.UseLine())
+
+	fmt.Printf("Core Flags:\n")
+	printFlag(cmd, "url", "u", "Base URL of the API to test")
+	printFlag(cmd, "spec", "s", "Path to API specification file (OpenAPI/Swagger)")
+	printFlag(cmd, "name", "n", "Project name for saving/loading configuration")
+
+	fmt.Printf("\nAuthentication:\n")
+	printFlag(cmd, "auth", "", "Authentication type: none|bearer|apikey|basic")
+	printFlag(cmd, "token", "", "Bearer token value")
+	printFlag(cmd, "key", "", "API key header name (e.g., X-API-Key)")
+	printFlag(cmd, "value", "", "API key value")
+	printFlag(cmd, "user", "", "Username for basic authentication")
+	printFlag(cmd, "pass", "", "Password for basic authentication")
+	printFlag(cmd, "clear-auth", "", "Remove saved authentication from project")
+
+	fmt.Printf("\nAdvanced:\n")
+	printFlag(cmd, "debug-file", "", "Path to debug log file (enables detailed logging)")
+	printFlag(cmd, "onboarding", "", "Force run onboarding wizard")
+
+	fmt.Printf("\nOther:\n")
+	printFlag(cmd, "help", "h", "Show this help message")
+	printFlag(cmd, "version", "v", "Show the version number")
+
+	fmt.Printf("\nLearn more: https://github.com/Octrafic/octrafic-cli\n")
+	fmt.Printf("Report issues: https://github.com/Octrafic/octrafic-cli/issues\n")
+}
+
+func printFlag(cmd *cobra.Command, name, shorthand, description string) {
+	flag := cmd.Flags().Lookup(name)
+	if flag == nil {
+		return
+	}
+
+	var flagName string
+	if shorthand != "" {
+		flagName = fmt.Sprintf("-%s, --%s", shorthand, name)
+	} else {
+		flagName = fmt.Sprintf("    --%s", name)
+	}
+	fmt.Printf("  %-22s %s\n", flagName, wrapText(description, 55))
+}
+
+func wrapText(text string, maxWidth int) string {
+	if len(text) <= maxWidth {
+		return text
+	}
+
+	words := strings.Fields(text)
+	var result strings.Builder
+	lineLen := 0
+
+	for i, word := range words {
+		if lineLen > 0 && lineLen+len(word)+1 > maxWidth {
+			result.WriteString("\n" + strings.Repeat(" ", 24))
+			lineLen = 24
+		} else if lineLen > 0 {
+			result.WriteString(" ")
+			lineLen++
+		}
+		result.WriteString(word)
+		lineLen += len(word)
+		if i < len(words)-1 {
+			lineLen++
+		}
+	}
+
+	return result.String()
+}
+
+func init() {
+	// Override the default help and usage functions
+	cobra.AddTemplateFunc("help", printCustomHelp)
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		printCustomHelp(cmd)
+	})
+	rootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
+		printCustomHelp(cmd)
+		return nil
+	})
+	// Set version template
+	rootCmd.SetVersionTemplate("octrafic {{.Version}}\n")
+
+	// Add version flag manually
+	rootCmd.Flags().BoolP("version", "v", false, "Show the version number")
+
+	rootCmd.Flags().StringVarP(&apiURL, "url", "u", "", "Base URL of the API to test")
+	rootCmd.Flags().StringVarP(&specFile, "spec", "s", "", "Path to API specification file (OpenAPI/Swagger)")
+	rootCmd.Flags().StringVarP(&projectName, "name", "n", "", "Project name for saving/loading configuration")
+
+	rootCmd.Flags().StringVar(&authType, "auth", "none", "Authentication type: none|bearer|apikey|basic")
+	rootCmd.Flags().StringVar(&authToken, "token", "", "Bearer token value")
+	rootCmd.Flags().StringVar(&authKey, "key", "", "API key header name (e.g., X-API-Key)")
+	rootCmd.Flags().StringVar(&authValue, "value", "", "API key value")
+	rootCmd.Flags().StringVar(&authUser, "user", "", "Username for basic authentication")
+	rootCmd.Flags().StringVar(&authPass, "pass", "", "Password for basic authentication")
+	rootCmd.Flags().BoolVar(&clearAuth, "clear-auth", false, "Remove saved authentication from project")
+
+	rootCmd.Flags().StringVar(&debugFilePath, "debug-file", "", "Path to debug log file (enables detailed logging)")
+	rootCmd.Flags().BoolVar(&forceOnboarding, "onboarding", false, "Force run onboarding wizard")
+
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		initLogger()
+		// Handle --version flag
+		if cmd.Flags().Changed("version") {
+			fmt.Printf("octrafic version %s\n", version)
+			os.Exit(0)
+		}
+	}
 }
 
 func buildAuthFromEnvironments() auth.AuthProvider {
@@ -508,7 +630,7 @@ func loadAndStartProject(project *storage.Project) {
 	} else {
 		if err := storage.ValidateSpecPath(project.SpecPath); err != nil {
 			fmt.Printf("⚠️  Warning: %v\n", err)
-			fmt.Printf("Please provide a new path to the specification file: ")
+			fmt.Printf("Please provide a new path to specification file: ")
 			var newPath string
 			_, _ = fmt.Scanln(&newPath)
 			if err := storage.ValidateSpecPath(newPath); err != nil {
@@ -535,28 +657,6 @@ func loadAndStartProject(project *storage.Project) {
 	}
 
 	cli.StartWithProject(project.BaseURL, analysis, project, authProvider, version)
-}
-
-func init() {
-	rootCmd.Flags().StringVarP(&apiURL, "url", "u", "", "Base URL of the API to test")
-	rootCmd.Flags().StringVarP(&specFile, "spec", "s", "", "Path to API specification file")
-	rootCmd.Flags().StringVarP(&projectName, "name", "n", "", "Project name for saving/loading")
-
-	rootCmd.Flags().StringVar(&authType, "auth", "none", "Authentication type (none|bearer|apikey|basic)")
-	rootCmd.Flags().StringVar(&authToken, "token", "", "Bearer token")
-	rootCmd.Flags().StringVar(&authKey, "key", "", "API key name (e.g., X-API-Key)")
-	rootCmd.Flags().StringVar(&authValue, "value", "", "API key value")
-	rootCmd.Flags().StringVar(&authUser, "user", "", "Username for basic auth")
-	rootCmd.Flags().StringVar(&authPass, "pass", "", "Password for basic auth")
-
-	rootCmd.Flags().BoolVar(&clearAuth, "clear-auth", false, "Remove saved authentication from project")
-
-	rootCmd.Flags().StringVar(&debugFilePath, "debug-file", "", "Path to debug log file (enables file logging)")
-
-	rootCmd.Flags().BoolVar(&forceOnboarding, "onboarding", false, "Force run onboarding wizard (even if already completed)")
-	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
-		initLogger()
-	}
 }
 
 func main() {
