@@ -62,7 +62,7 @@ paru -S octrafic-bin
 
 ## Build from Source
 
-Requires Go 1.25+
+Requires Go 1.26+
 
 ```bash
 git clone https://github.com/Octrafic/octrafic-cli.git
