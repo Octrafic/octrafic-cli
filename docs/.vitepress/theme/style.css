@@ -58,7 +58,7 @@
 
   /* Typography */
   --vp-font-family-base: 'Inter', sans-serif;
-  --vp-font-family-heading: 'Space Mono', monospace;
+  --vp-font-family-heading: 'Space Grotesk', sans-serif;
   --vp-font-family-mono: 'JetBrains Mono', monospace;
 
   /* Button */
@@ -146,7 +146,7 @@
 
   /* Typography */
   --vp-font-family-base: 'Inter', sans-serif;
-  --vp-font-family-heading: 'Space Mono', monospace;
+  --vp-font-family-heading: 'Space Grotesk', sans-serif;
   --vp-font-family-mono: 'JetBrains Mono', monospace;
 
   /* Button */
@@ -224,7 +224,7 @@ h1, h2, h3, h4, h5, h6,
   font-size: 16px;
   font-weight: 700;
   line-height: 1;
-  font-family: 'Space Mono', monospace;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 /* Home page */
@@ -256,7 +256,7 @@ h1, h2, h3, h4, h5, h6,
   font-weight: 700;
   color: var(--vp-c-brand-2);
   margin: 0 0 12px;
-  font-family: 'Space Mono', monospace;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .home-tagline {
@@ -296,7 +296,7 @@ h1, h2, h3, h4, h5, h6,
 .home-card-title {
   font-size: 18px;
   font-weight: 700;
-  font-family: 'Space Mono', monospace;
+  font-family: 'Space Grotesk', sans-serif;
   color: var(--vp-c-text-1);
   margin: 0 0 6px;
 }
