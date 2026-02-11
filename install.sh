@@ -182,9 +182,27 @@ install_binary() {
     echo "Extracting..."
     tar -xzf "$TEMP_ARCHIVE" -C "$TEMP_DIR"
 
-    echo "Installing to $INSTALL_DIR (requires sudo)..."
-    sudo mv "$TEMP_DIR/$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
-    sudo chmod +x "$INSTALL_DIR/$BINARY_NAME"
+    # Check if sudo is available
+    if command -v sudo &> /dev/null && sudo -n true 2>/dev/null; then
+        echo "Installing to $INSTALL_DIR (requires sudo)..."
+        sudo mv "$TEMP_DIR/$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
+        sudo chmod +x "$INSTALL_DIR/$BINARY_NAME"
+    else
+        # Fallback to user-local installation
+        USER_INSTALL_DIR="$HOME/.local/bin"
+        echo -e "${YELLOW}sudo not available, installing to $USER_INSTALL_DIR${NC}"
+        mkdir -p "$USER_INSTALL_DIR"
+        mv "$TEMP_DIR/$BINARY_NAME" "$USER_INSTALL_DIR/$BINARY_NAME"
+        chmod +x "$USER_INSTALL_DIR/$BINARY_NAME"
+        
+        # Check if ~/.local/bin is in PATH
+        if [[ ":$PATH:" != *":$USER_INSTALL_DIR:"* ]]; then
+            echo ""
+            echo -e "${YELLOW}Add $USER_INSTALL_DIR to your PATH:${NC}"
+            echo -e "${CYAN}  export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}"
+            echo -e "${CYAN}Add this line to ~/.bashrc or ~/.zshrc${NC}"
+        fi
+    fi
 
     rm -rf "$TEMP_DIR"
 }
