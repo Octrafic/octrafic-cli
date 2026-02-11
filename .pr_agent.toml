@@ -1,0 +1,41 @@
+[config]
+model = "anthropic/claude-haiku-4.5"
+git_provider = "github"
+
+[github_app]
+override_deployment_type = true
+
+[github_action_config]
+auto_review = true
+auto_describe = true
+auto_improve = false
+pr_actions = ["opened", "reopened", "ready_for_review", "synchronize"]
+
+[pr_reviewer]
+extra_instructions = """
+Focus on:
+- API design and HTTP request/response handling
+- Go idioms and error handling
+- CLI UX and terminal output
+- Performance and memory usage
+- Security (API keys, auth tokens)
+"""
+
+require_score_review = false
+require_tests_review = false
+require_focused_review = false
+num_code_suggestions = 4
+inline_code_comments = true
+persistent_comment = true
+
+[pr_description]
+publish_description_as_comment = false
+generate_ai_title = true
+use_bullet_points = true
+
+[pr_code_suggestions]
+commitable_code_suggestions = true
+num_code_suggestions = 4
+
+[ignore]
+glob = ["go.sum", "*.min.js", "vendor/**", "dist/**", "*.lock"]
