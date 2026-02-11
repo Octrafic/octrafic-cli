@@ -2,6 +2,10 @@
 model = "anthropic/claude-haiku-4.5"
 git_provider = "github"
 
+[openai]
+api_type = "openai"
+api_base = "https://openrouter.ai/api/v1"
+
 [github_app]
 override_deployment_type = true
 
