@@ -25,6 +25,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
           config.model: "anthropic/claude-haiku-4.5"
+          config.custom_model_max_tokens: "200000"
           config.ai_timeout: "120"
           
           github_action_config.auto_review: "true"
