@@ -400,14 +400,18 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 			}
 
 			if toolID != "" {
-				m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+				chatMsg := agent.ChatMessage{
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
 						ID:       toolID,
 						Name:     "ExecuteTest",
 						Response: resultMap,
 					},
-				})
+				}
+				m.conversationHistory = append(m.conversationHistory, chatMsg)
+
+				// Save function response to conversation
+				m.saveChatMessageToConversation(chatMsg)
 
 				// Send back to agent to continue
 				return m.sendChatMessage("")
@@ -463,14 +467,18 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 			// Add tool result to conversation history as function response
 			// Only if this was from a Claude tool_use (has toolID)
 			if toolID != "" {
-				m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+				chatMsg := agent.ChatMessage{
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
 						ID:       toolID,
 						Name:     "ExecuteTestGroup",
 						Response: resultMap,
 					},
-				})
+				}
+				m.conversationHistory = append(m.conversationHistory, chatMsg)
+
+				// Save function response to conversation
+				m.saveChatMessageToConversation(chatMsg)
 
 				// Send back to agent
 				return m.sendChatMessage("")
@@ -488,14 +496,18 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 				maps.Copy(resultMap, r)
 			}
 
-			m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+			chatMsg := agent.ChatMessage{
 				Role: "user",
 				FunctionResponse: &agent.FunctionResponseData{
 					ID:       toolID,
 					Name:     "get_endpoints_details",
 					Response: resultMap,
 				},
-			})
+			}
+			m.conversationHistory = append(m.conversationHistory, chatMsg)
+
+			// Save function response to conversation
+			m.saveChatMessageToConversation(chatMsg)
 
 			// Send back to agent to continue
 			return m.sendChatMessage("")
@@ -512,14 +524,18 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 			m.addMessage(m.subtleStyle.Render("   " + filePath))
 
 			if toolID != "" {
-				m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+				chatMsg := agent.ChatMessage{
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
 						ID:       toolID,
 						Name:     "GenerateReport",
 						Response: resultMap,
 					},
-				})
+				}
+				m.conversationHistory = append(m.conversationHistory, chatMsg)
+
+				// Save function response to conversation
+				m.saveChatMessageToConversation(chatMsg)
 
 				return m.sendChatMessage("")
 			}
@@ -536,14 +552,18 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 				maps.Copy(resultMap, r)
 			}
 
-			m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+			chatMsg := agent.ChatMessage{
 				Role: "user",
 				FunctionResponse: &agent.FunctionResponseData{
 					ID:       toolID,
 					Name:     "GenerateTestPlan",
 					Response: resultMap,
 				},
-			})
+			}
+			m.conversationHistory = append(m.conversationHistory, chatMsg)
+
+			// Save function response to conversation
+			m.saveChatMessageToConversation(chatMsg)
 
 			// Send back to agent to continue
 			return m.sendChatMessage("")

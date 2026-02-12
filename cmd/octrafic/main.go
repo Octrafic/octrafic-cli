@@ -51,6 +51,9 @@ var (
 	debugFilePath string
 
 	forceOnboarding bool
+	
+	resumeConversation bool
+	conversationID     string
 )
 
 var rootCmd = &cobra.Command{
@@ -72,6 +75,12 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 				os.Exit(0)
 			}
 			fmt.Println("\nOnboarding complete! Run 'octrafic' to start using the tool.")
+			return
+		}
+
+		// Handle --resume flag
+		if resumeConversation {
+			handleResumeConversation()
 			return
 		}
 
@@ -214,6 +223,8 @@ func printCustomHelp(cmd *cobra.Command) {
 	printFlag(cmd, "url", "u", "Base URL of the API to test")
 	printFlag(cmd, "spec", "s", "Path to API specification file (OpenAPI/Swagger)")
 	printFlag(cmd, "name", "n", "Project name for saving/loading configuration")
+	printFlag(cmd, "resume", "r", "Resume a previous conversation")
+	printFlag(cmd, "conversation", "", "Specific conversation ID to resume")
 
 	fmt.Printf("\nAuthentication:\n")
 	printFlag(cmd, "auth", "", "Authentication type: none|bearer|apikey|basic")
@@ -308,6 +319,9 @@ func init() {
 
 	rootCmd.Flags().StringVar(&debugFilePath, "debug-file", "", "Path to debug log file (enables detailed logging)")
 	rootCmd.Flags().BoolVar(&forceOnboarding, "onboarding", false, "Force run onboarding wizard")
+
+	rootCmd.Flags().BoolVarP(&resumeConversation, "resume", "r", false, "Resume a previous conversation")
+	rootCmd.Flags().StringVar(&conversationID, "conversation", "", "Specific conversation ID to resume")
 
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		initLogger()
@@ -657,6 +671,156 @@ func loadAndStartProject(project *storage.Project) {
 	}
 
 	cli.StartWithProject(project.BaseURL, analysis, project, authProvider, version)
+}
+
+func handleResumeConversation() {
+	var project *storage.Project
+	var conversation *storage.Conversation
+
+	// If project name is specified, load it directly
+	if projectName != "" {
+		var err error
+		project, err = storage.FindProjectByName(projectName)
+		if err != nil {
+			logger.Error("Error loading project", logger.String("name", projectName), logger.Err(err))
+			os.Exit(1)
+		}
+	} else {
+		// Show project selector with conversation preview
+		projects, err := storage.ListNamedProjects()
+		if err != nil {
+			logger.Error("Error loading projects", logger.Err(err))
+			os.Exit(1)
+		}
+
+		if len(projects) == 0 {
+			fmt.Println("No projects found. Create a project first:")
+			fmt.Println("  octrafic -u <api-url> -s <spec-file> -n <project-name>")
+			os.Exit(0)
+		}
+
+		selectorModel := cli.NewProjectWithConversationsModel(projects)
+		p := tea.NewProgram(selectorModel)
+
+		finalModel, err := p.Run()
+		if err != nil {
+			logger.Error("Error running project selector", logger.Err(err))
+			os.Exit(1)
+		}
+
+		result, ok := finalModel.(cli.ProjectWithConversationsModel)
+		if !ok || result.IsCancelled() {
+			os.Exit(0)
+		}
+
+		project = result.GetSelectedProject()
+		if project == nil {
+			os.Exit(0)
+		}
+	}
+
+	// If conversation ID is specified, load it directly
+	if conversationID != "" {
+		var err error
+		conversation, err = storage.LoadConversation(project.ID, conversationID)
+		if err != nil {
+			logger.Error("Error loading conversation", logger.String("id", conversationID), logger.Err(err))
+			os.Exit(1)
+		}
+	} else {
+		// Show conversation selector
+		convListModel := cli.NewConversationListModel(project)
+		p := tea.NewProgram(convListModel)
+
+		finalModel, err := p.Run()
+		if err != nil {
+			logger.Error("Error running conversation selector", logger.Err(err))
+			os.Exit(1)
+		}
+
+		result, ok := finalModel.(cli.ConversationListModel)
+		if !ok || result.IsCancelled() {
+			os.Exit(0)
+		}
+
+		if result.ShouldCreateNew() {
+			// Start new conversation (same as normal project load)
+			loadAndStartProject(project)
+			return
+		}
+
+		conversation = result.GetSelectedConversation()
+		if conversation == nil {
+			os.Exit(0)
+		}
+	}
+
+	// Load conversation and start
+	loadAndStartConversation(project, conversation)
+}
+
+func loadAndStartConversation(project *storage.Project, conversation *storage.Conversation) {
+	// Update last accessed time
+	project.LastAccessedAt = time.Now()
+	if err := storage.SaveProject(project); err != nil {
+		fmt.Printf("Warning: failed to update last accessed time: %v\n", err)
+	}
+
+	// Build auth provider
+	var authProvider auth.AuthProvider
+	if authType != "" && authType != "none" {
+		authProvider = buildAuthFromFlags()
+	} else if authEnv, exists := os.LookupEnv(authTypeEnvVar); exists && authEnv != "" {
+		authProvider = buildAuthFromEnvironments()
+	} else if project.HasAuth() {
+		authProvider = buildAuthFromProject(project)
+		fmt.Printf("✓ Using saved authentication (%s)\n", project.AuthConfig.Type)
+	} else {
+		authProvider = &auth.NoAuth{}
+	}
+
+	// Load analysis
+	var analysis *analyzer.Analysis
+
+	if storage.HasEndpoints(project.ID, project.IsTemporary) {
+		fmt.Printf("✓ Using cached endpoints\n")
+		analysis = &analyzer.Analysis{
+			BaseURL:      project.BaseURL,
+			Timestamp:    time.Now(),
+			EndpointInfo: make(map[string]analyzer.EndpointAnalysis),
+		}
+	} else {
+		if err := storage.ValidateSpecPath(project.SpecPath); err != nil {
+			fmt.Printf("⚠️  Warning: %v\n", err)
+			fmt.Printf("Please provide a new path to specification file: ")
+			var newPath string
+			_, _ = fmt.Scanln(&newPath)
+			if err := storage.ValidateSpecPath(newPath); err != nil {
+				logger.Error("Spec path validation failed", logger.Err(err))
+				os.Exit(1)
+			}
+			project.SpecPath = newPath
+			if err := storage.SaveProject(project); err != nil {
+				logger.Warn("Failed to save updated spec path", logger.Err(err))
+			}
+		}
+
+		specContent, err := parser.ParseSpecification(project.SpecPath)
+		if err != nil {
+			logger.Error("Error parsing specification", logger.Err(err))
+			os.Exit(1)
+		}
+
+		analysis, err = analyzer.AnalyzeAPI(project.BaseURL, specContent)
+		if err != nil {
+			logger.Error("Error analyzing API", logger.Err(err))
+			os.Exit(1)
+		}
+	}
+
+	fmt.Printf("✓ Loading conversation: %s\n", conversation.Title)
+
+	cli.StartWithConversation(project.BaseURL, analysis, project, authProvider, version, conversation.ID)
 }
 
 func main() {
