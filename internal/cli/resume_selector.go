@@ -26,7 +26,7 @@ const (
 	projectsPerPage = 3 // Projects visible at once
 )
 
-// truncateMiddle truncates text in the middle if too long
+// truncateMiddle truncates text in the middle with "..." if it exceeds maxLen.
 func truncateMiddle(text string, maxLen int) string {
 	if len(text) <= maxLen {
 		return text
@@ -41,7 +41,7 @@ func truncateMiddle(text string, maxLen int) string {
 	return text[:leftLen] + "..." + text[len(text)-rightLen:]
 }
 
-// ResumeSelectorModel is a fullscreen form-like UI for selecting project and conversation
+// ResumeSelectorModel is a fullscreen UI for selecting project and conversation.
 type ResumeSelectorModel struct {
 	stage resumeStage
 	
@@ -70,6 +70,7 @@ type ResumeSelectorModel struct {
 	height  int
 }
 
+// NewResumeSelectorModel creates a new project and conversation selector.
 func NewResumeSelectorModel(projects []*storage.Project, version string) ResumeSelectorModel {
 	ti := textinput.New()
 	ti.Placeholder = "Search projects..."
@@ -90,10 +91,12 @@ func NewResumeSelectorModel(projects []*storage.Project, version string) ResumeS
 	}
 }
 
+// Init initializes the model (required by tea.Model interface).
 func (m ResumeSelectorModel) Init() tea.Cmd {
 	return nil
 }
 
+// Update handles messages and updates the selector state.
 func (m ResumeSelectorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -263,14 +266,14 @@ func (m ResumeSelectorModel) updateConversationSelection(msg tea.KeyMsg) (tea.Mo
 	return m, nil
 }
 
+// View renders the selector UI.
 func (m ResumeSelectorModel) View() string {
 	if m.stage == stageDone {
 		return ""
 	}
-	
+
 	var sections []string
-	
-	// Header with logo only for project selection
+
 	if m.stage == stageSelectProject {
 		sections = append(sections, m.renderHeader())
 	}
@@ -639,8 +642,7 @@ func (m ResumeSelectorModel) layoutFullscreen(sections []string) string {
 				result.WriteString("\n")
 				continue
 			}
-			
-			// Center horizontally
+
 			lineWidth := lipgloss.Width(line)
 			leftPadding := (m.width - lineWidth) / 2
 			if leftPadding < 0 {
@@ -656,27 +658,27 @@ func (m ResumeSelectorModel) layoutFullscreen(sections []string) string {
 	return result.String()
 }
 
-// IsCancelled returns true if user cancelled
+// IsCancelled returns true if the user cancelled the selection.
 func (m ResumeSelectorModel) IsCancelled() bool {
 	return m.cancelled
 }
 
-// GetSelectedProject returns the selected project
+// GetSelectedProject returns the selected project.
 func (m ResumeSelectorModel) GetSelectedProject() *storage.Project {
 	return m.selectedProject
 }
 
-// GetSelectedConversation returns the selected conversation
+// GetSelectedConversation returns the selected conversation.
 func (m ResumeSelectorModel) GetSelectedConversation() *storage.Conversation {
 	return m.selectedConversation
 }
 
-// ShouldCreateNew returns true if user wants to create new conversation
+// ShouldCreateNew returns true if the user wants to create a new conversation.
 func (m ResumeSelectorModel) ShouldCreateNew() bool {
 	return m.createNew
 }
 
-// ShouldCreateNewProject returns true if user wants to create new project
+// ShouldCreateNewProject returns true if the user wants to create a new project.
 func (m ResumeSelectorModel) ShouldCreateNewProject() bool {
 	return m.createNewProject
 }

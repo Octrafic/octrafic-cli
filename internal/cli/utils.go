@@ -11,12 +11,14 @@ import (
 	"github.com/muesli/reflow/wordwrap"
 )
 
+// renderUserLabel returns the styled prompt symbol for user input.
 func renderUserLabel() string {
 	return lipgloss.NewStyle().
 		Foreground(Theme.TextMuted).
 		Render(">")
 }
 
+// filterCommands returns commands matching the input prefix.
 func filterCommands(input string) []Command {
 	var filtered []Command
 	lowerInput := strings.ToLower(input)
@@ -30,7 +32,7 @@ func filterCommands(input string) []Command {
 	return filtered
 }
 
-// renderHeader creates and returns header lines (logo + info)
+// renderHeader creates and returns header lines with logo and project info.
 func (m *TestUIModel) renderHeader() []string {
 	subtleColor := Theme.TextMuted
 	valueColor := Theme.Cyan
@@ -235,6 +237,7 @@ func (m *TestUIModel) saveMessageToConversation(messageType, content string, met
 	_ = storage.SaveMessage(m.currentProject.ID, m.conversationID, messageType, content, metadata)
 }
 
+// saveChatMessageToConversation saves a chat message to the conversation database.
 func (m *TestUIModel) saveChatMessageToConversation(msg agent.ChatMessage) {
 	if m.conversationID == "" || m.currentProject == nil || m.currentProject.IsTemporary {
 		return
@@ -268,7 +271,7 @@ func (m *TestUIModel) saveChatMessageToConversation(msg agent.ChatMessage) {
 	_ = storage.SaveMessage(m.currentProject.ID, m.conversationID, msg.Role, msg.Content, metadata)
 }
 
-// saveUserMessage wraps addMessage and saves user message to conversation
+// saveUserMessage displays and saves a user message to conversation.
 func (m *TestUIModel) saveUserMessage(content string) {
 	m.addMessage("")
 	m.addMessage(renderUserLabel() + " " + content)
@@ -277,12 +280,12 @@ func (m *TestUIModel) saveUserMessage(content string) {
 	m.saveMessageToConversation("user", content, nil)
 }
 
-// saveAssistantMessage saves assistant message to conversation
+// saveAssistantMessage saves an assistant message to conversation.
 func (m *TestUIModel) saveAssistantMessage(content string) {
 	m.saveMessageToConversation("assistant", content, nil)
 }
 
-// loadConversationHistory loads and replays conversation history
+// loadConversationHistory loads and replays conversation history from database.
 func (m *TestUIModel) loadConversationHistory() error {
 	if m.conversationID == "" || !m.isLoadedConversation || m.currentProject == nil {
 		return nil
@@ -293,25 +296,20 @@ func (m *TestUIModel) loadConversationHistory() error {
 		return err
 	}
 
-	// Clear welcome messages first
 	m.messages = []string{}
 
-	// Add header (same as new conversation)
 	for _, line := range m.renderHeader() {
 		m.addMessage(line)
 	}
 
-	// Replay messages
 	for i, msg := range messages {
 		var chatMsg agent.ChatMessage
 
-		// Check if next message is a tool (for spacing)
 		nextIsToolMessage := false
 		if i+1 < len(messages) && messages[i+1].Type == "tool" {
 			nextIsToolMessage = true
 		}
 
-		// Handle different message types
 		switch msg.Type {
 		case "tool":
 			chatMsg = agent.ChatMessage{
@@ -411,7 +409,6 @@ func (m *TestUIModel) loadConversationHistory() error {
 					}
 				}
 
-				// Load tokens from metadata
 				if inputTokens, ok := msg.Metadata["input_tokens"].(float64); ok {
 					chatMsg.InputTokens = int64(inputTokens)
 					m.inputTokens += int64(inputTokens)
@@ -440,7 +437,7 @@ func (m *TestUIModel) loadConversationHistory() error {
 	return nil
 }
 
-// getString safely gets string from map
+// getString safely extracts a string value from a map, returning empty string if not found.
 func getString(m map[string]interface{}, key string) string {
 	if v, ok := m[key].(string); ok {
 		return v

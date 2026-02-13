@@ -11,7 +11,7 @@ const Logo = `░█▀█░█▀▀░▀█▀░█▀▄░█▀█░█
 ░█░█░█░░░░█░░█▀▄░█▀█░█▀▀░░█░░█░░
 ░▀▀▀░▀▀▀░░▀░░▀░▀░▀░▀░▀░░░▀▀▀░▀▀▀`
 
-// RenderLogo returns the styled logo with gradient colors
+// RenderLogo returns the styled logo with gradient colors.
 func RenderLogo() string {
 	logoLines := strings.Split(Logo, "\n")
 	styledLogo := make([]string, len(logoLines))

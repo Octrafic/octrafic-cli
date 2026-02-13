@@ -23,7 +23,7 @@ type releaseNotesMsg struct {
 	err   error
 }
 
-// Update handles messages and updates the model
+// Update handles all incoming messages and updates the model state.
 func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -36,7 +36,6 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.viewport.Width = msg.Width - 4
-		// Account for border (2 lines) + status line + help text + spacing
 		m.viewport.Height = msg.Height - 7
 		m.textarea.SetWidth(msg.Width - 8)
 		m.updateViewport()
@@ -333,6 +332,7 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// handleStreamingMsg processes streaming chunks from the agent.
 func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.Cmd) {
 	msgType := "UNKNOWN"
 	if strings.HasPrefix(msg.chunk, "\x00ERROR:") {
@@ -422,11 +422,9 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		m.conversationHistory = append(m.conversationHistory, chatMsg)
 		m.saveChatMessageToConversation(chatMsg)
 
-		// Accumulate tokens to total counters
 		m.inputTokens += m.streamedInputTokens
 		m.outputTokens += m.streamedOutputTokens
 
-		// Reset streaming state
 		m.streamedAgentMessage = ""
 		m.streamedInputTokens = 0
 		m.streamedOutputTokens = 0
@@ -490,7 +488,7 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 	return m, waitForReasoning(msg.channel)
 }
 
-// handleGlobalKeyboard handles global keyboard shortcuts
+// handleGlobalKeyboard processes global keyboard shortcuts like Ctrl+C and Esc.
 func handleGlobalKeyboard(m *TestUIModel, msg tea.KeyMsg) (*TestUIModel, tea.Cmd, bool) {
 	if msg.Type == tea.KeyCtrlC {
 		return m, tea.Quit, true
@@ -552,7 +550,7 @@ func handleGlobalKeyboard(m *TestUIModel, msg tea.KeyMsg) (*TestUIModel, tea.Cmd
 	return m, nil, false
 }
 
-// handleSlashCommands handles slash commands
+// handleSlashCommands processes commands starting with "/" like /help, /clear, etc.
 func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd, bool) {
 	if !strings.HasPrefix(userInput, "/") {
 		return m, nil, false
@@ -677,7 +675,7 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 	return m, nil, false
 }
 
-// handleAuthCommand handles auth subcommands
+// handleAuthCommand processes auth subcommands like "auth bearer", "auth apikey", etc.
 func handleAuthCommand(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd, bool) {
 	if !strings.HasPrefix(userInput, "auth ") {
 		return m, nil, false
@@ -764,7 +762,7 @@ func handleAuthCommand(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd,
 	}
 }
 
-// handleTestPlanState handles StateShowingTestPlan keyboard input
+// handleTestPlanState processes keyboard input when showing the test plan selection UI.
 func handleTestPlanState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyUp:
@@ -850,7 +848,7 @@ func handleTestPlanState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleConfirmationState handles StateAskingConfirmation keyboard input
+// handleConfirmationState processes keyboard input when asking for tool execution confirmation.
 func handleConfirmationState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyUp:
@@ -926,7 +924,7 @@ func handleConfirmationState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd
 	return m, nil
 }
 
-// handleCommandsState handles StateShowingCommands keyboard input
+// handleCommandsState processes keyboard input when showing command autocomplete suggestions.
 func handleCommandsState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -988,14 +986,14 @@ func handleCommandsState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
-// showToolWidget displays a tool execution widget with title and details
-// Deprecated: use m.showToolMessage() instead
+// showToolWidget displays a tool execution widget with title and details.
+// Deprecated: use m.showToolMessage() instead.
 func showToolWidget(m *TestUIModel, title string, details string) {
 	m.showToolMessage(title, details)
 	m.updateViewport()
 }
 
-// handleProcessToolCalls processes tool calls from the agent
+// handleProcessToolCalls executes tool calls received from the agent.
 func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, tea.Cmd) {
 	if len(m.streamedToolCalls) > 0 {
 		for _, toolCall := range m.streamedToolCalls {
@@ -1102,7 +1100,7 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 	return m, nil
 }
 
-// handleShowTestSelection displays test selection UI
+// handleShowTestSelection displays the test selection UI with generated test cases.
 func handleShowTestSelection(m *TestUIModel, msg showTestSelectionMsg) (tea.Model, tea.Cmd) {
 	m.tests = make([]Test, 0, len(msg.tests))
 	for i, testMap := range msg.tests {

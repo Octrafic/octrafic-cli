@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// handleGenerateTestPlanResult handles the result from GenerateTestPlan backend call
+// handleGenerateTestPlanResult processes the generated test plan from the agent.
 func handleGenerateTestPlanResult(m *TestUIModel, msg generateTestPlanResultMsg) (tea.Model, tea.Cmd) {
 	testCases := make([]map[string]any, 0, len(msg.backendTests))
 	for _, bt := range msg.backendTests {
@@ -74,11 +74,12 @@ func handleGenerateTestPlanResult(m *TestUIModel, msg generateTestPlanResultMsg)
 	return m, nil
 }
 
+// handleStartTestGroup initiates execution of a test group.
 func handleStartTestGroup(m *TestUIModel, msg startTestGroupMsg) (tea.Model, tea.Cmd) {
 	m.pendingTests = msg.tests
 	m.currentTestGroupLabel = msg.label
 	m.currentTestToolName = msg.toolName
-	// CRITICAL: Only set currentTestToolID if not already set (preserve GenerateTestPlan's tool_use_id)
+
 	if msg.toolID != "" {
 		m.currentTestToolID = msg.toolID
 	}
@@ -94,6 +95,7 @@ func handleStartTestGroup(m *TestUIModel, msg startTestGroupMsg) (tea.Model, tea
 	return m, runNextTest()
 }
 
+// handleRunNextTest executes the next test in the queue.
 func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 	if len(m.pendingTests) == 0 {
 		m.addMessage("")
