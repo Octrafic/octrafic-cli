@@ -259,6 +259,12 @@ func (m *TestUIModel) saveChatMessageToConversation(msg agent.ChatMessage) {
 	if len(msg.FunctionCalls) > 0 {
 		metadata["tool_calls"] = msg.FunctionCalls
 	}
+	if msg.InputTokens > 0 {
+		metadata["input_tokens"] = msg.InputTokens
+	}
+	if msg.OutputTokens > 0 {
+		metadata["output_tokens"] = msg.OutputTokens
+	}
 	_ = storage.SaveMessage(m.currentProject.ID, m.conversationID, msg.Role, msg.Content, metadata)
 }
 
@@ -403,6 +409,16 @@ func (m *TestUIModel) loadConversationHistory() error {
 					if response, ok := toolResults["response"].(map[string]interface{}); ok {
 						chatMsg.FunctionResponse.Response = response
 					}
+				}
+
+				// Load tokens from metadata
+				if inputTokens, ok := msg.Metadata["input_tokens"].(float64); ok {
+					chatMsg.InputTokens = int64(inputTokens)
+					m.inputTokens += int64(inputTokens)
+				}
+				if outputTokens, ok := msg.Metadata["output_tokens"].(float64); ok {
+					chatMsg.OutputTokens = int64(outputTokens)
+					m.outputTokens += int64(outputTokens)
 				}
 			}
 

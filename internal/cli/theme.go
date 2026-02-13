@@ -1,11 +1,36 @@
 package cli
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"strings"
+	
+	"github.com/charmbracelet/lipgloss"
+)
 
 // Logo contains the ASCII art for the application
 const Logo = `░█▀█░█▀▀░▀█▀░█▀▄░█▀█░█▀▀░▀█▀░█▀▀
 ░█░█░█░░░░█░░█▀▄░█▀█░█▀▀░░█░░█░░
 ░▀▀▀░▀▀▀░░▀░░▀░▀░▀░▀░▀░░░▀▀▀░▀▀▀`
+
+// RenderLogo returns the styled logo with gradient colors
+func RenderLogo() string {
+	logoLines := strings.Split(Logo, "\n")
+	styledLogo := make([]string, len(logoLines))
+	
+	for i, line := range logoLines {
+		var styledLine strings.Builder
+		for _, char := range line {
+			if char == '░' {
+				styledLine.WriteString(lipgloss.NewStyle().Foreground(Theme.TextSubtle).Render(string(char)))
+			} else {
+				color := Theme.LogoGradient[i%len(Theme.LogoGradient)]
+				styledLine.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Bold(true).Render(string(char)))
+			}
+		}
+		styledLogo[i] = styledLine.String()
+	}
+	
+	return strings.Join(styledLogo, "\n")
+}
 
 // Theme defines the Sky Blue color palette for the entire application
 var Theme = struct {
@@ -41,6 +66,7 @@ var Theme = struct {
 	BgSecondary lipgloss.Color // Secondary background (Slate 900) #0F172A
 	BgElevated  lipgloss.Color // Elevated background (Slate 800) #1E293B
 	BgCode      lipgloss.Color // Code background (Slate 800) #1E293B
+	BgSelected  lipgloss.Color // Selected item background (Slate 800) #1E293B
 
 	// Border colors
 	BorderSubtle  lipgloss.Color // Subtle border (Slate 700) #334155
@@ -90,6 +116,7 @@ var Theme = struct {
 	BgSecondary: lipgloss.Color("#0F172A"), // Slate 900
 	BgElevated:  lipgloss.Color("#1E293B"), // Slate 800
 	BgCode:      lipgloss.Color("#1E293B"), // Slate 800
+	BgSelected:  lipgloss.Color("#2a2a2a"), // Selected item background
 
 	// Borders
 	BorderSubtle:  lipgloss.Color("#334155"), // Slate 700

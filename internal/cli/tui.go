@@ -139,6 +139,8 @@ type TestUIModel struct {
 	streamedAgentMessage     string           // Agent message received from stream, saved to history when DONE
 	streamedReasoningChunk   string
 	streamedTextChunk        string
+	streamedInputTokens      int64 // Tokens for current streaming message
+	streamedOutputTokens     int64 // Tokens for current streaming message
 	confirmationChoice       int
 	cancelStream             chan struct{} // Channel to cancel ongoing stream
 

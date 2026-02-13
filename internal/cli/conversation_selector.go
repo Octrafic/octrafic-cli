@@ -91,27 +91,46 @@ func (m ProjectWithConversationsModel) View() string {
 	s.WriteString(title)
 	s.WriteString("\n\n")
 
+	// Table header
+	headerStyle := lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true)
+	s.WriteString("  ")
+	s.WriteString(headerStyle.Render(fmt.Sprintf("%-30s %-42s %s", "NAME", "URL", "LAST USED")))
+	s.WriteString("\n")
+
 	// Projects list
 	for i, project := range m.projects {
-		cursor := " "
-		style := itemStyle
+		style := lipgloss.NewStyle().Foreground(Theme.Text)
+		prefix := "  "
 		if i == m.cursor {
-			cursor = "❯"
-			style = selectedItemStyle
+			style = lipgloss.NewStyle().
+				Foreground(Theme.PrimaryStrong).
+				Background(Theme.BgSelected).
+				Bold(true)
+			prefix = "❯ "
 		}
 
-		// Project name with last accessed time
 		timeAgo := formatTimeAgo(project.LastAccessedAt)
-		line := fmt.Sprintf("%s %s %s", cursor, project.Name, lipgloss.NewStyle().Foreground(Theme.TextSubtle).Render("("+timeAgo+")"))
-		s.WriteString(style.Render(line))
-		s.WriteString("\n")
-
-		// Show URL below project name if selected
-		if i == m.cursor {
-			urlLine := fmt.Sprintf("     %s", project.BaseURL)
-			s.WriteString(lipgloss.NewStyle().Foreground(Theme.TextMuted).Render(urlLine))
-			s.WriteString("\n")
+		
+		// Format URL (remove protocol for cleaner look)
+		url := project.BaseURL
+		url = strings.TrimPrefix(url, "https://")
+		url = strings.TrimPrefix(url, "http://")
+		
+		// Truncate if too long
+		name := project.Name
+		if len(name) > 30 {
+			name = name[:27] + "..."
 		}
+		if len(url) > 42 {
+			url = url[:39] + "..."
+		}
+		
+		// Build table row
+		data := fmt.Sprintf("%-30s %-42s %s", name, url, timeAgo)
+		
+		s.WriteString(prefix)
+		s.WriteString(style.Render(data))
+		s.WriteString("\n")
 	}
 
 	s.WriteString("\n")
@@ -180,10 +199,15 @@ type ConversationListModel struct {
 func NewConversationListModel(project *storage.Project) ConversationListModel {
 	conversations, err := storage.ListConversations(project.ID)
 
+	cursor := 0
+	if len(conversations) > 0 {
+		cursor = 1 // Start at first conversation if available
+	}
+
 	return ConversationListModel{
 		project:       project,
 		conversations: conversations,
-		cursor:        0, // Start at "New conversation"
+		cursor:        cursor,
 		err:           err,
 	}
 }

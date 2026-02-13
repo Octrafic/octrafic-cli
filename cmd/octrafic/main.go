@@ -52,8 +52,7 @@ var (
 
 	forceOnboarding bool
 	
-	resumeConversation bool
-	conversationID     string
+	resumeConversationID string
 )
 
 var rootCmd = &cobra.Command{
@@ -78,9 +77,9 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 			return
 		}
 
-		// Handle --resume flag
-		if resumeConversation {
-			handleResumeConversation()
+		// Handle --resume <uuid> flag
+		if resumeConversationID != "" {
+			handleResumeByUUID(resumeConversationID)
 			return
 		}
 
@@ -88,13 +87,15 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 		hasSpec := specFile != ""
 		hasName := projectName != ""
 
+		// If no flags provided, show fullscreen project+conversation selector
 		if !hasURL && !hasSpec && !hasName {
-			showProjectList()
+			handleFullscreenSelector()
 			return
 		}
 
+		// If only project name provided, show conversation selector for that project
 		if hasName && !hasURL && !hasSpec {
-			loadProjectByName(projectName)
+			handleProjectConversationSelector(projectName)
 			return
 		}
 		if !hasURL {
@@ -320,8 +321,7 @@ func init() {
 	rootCmd.Flags().StringVar(&debugFilePath, "debug-file", "", "Path to debug log file (enables detailed logging)")
 	rootCmd.Flags().BoolVar(&forceOnboarding, "onboarding", false, "Force run onboarding wizard")
 
-	rootCmd.Flags().BoolVarP(&resumeConversation, "resume", "r", false, "Resume a previous conversation")
-	rootCmd.Flags().StringVar(&conversationID, "conversation", "", "Specific conversation ID to resume")
+	rootCmd.Flags().StringVarP(&resumeConversationID, "resume", "r", "", "Resume a specific conversation by UUID")
 
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		initLogger()
@@ -455,41 +455,6 @@ func generateUUID() string {
 	b[6] = (b[6] & 0x0f) | 0x40
 	b[8] = (b[8] & 0x3f) | 0x80
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-}
-
-func showProjectList() {
-	projects, err := storage.ListNamedProjects()
-	if err != nil {
-		logger.Error("Error loading projects", logger.Err(err))
-		os.Exit(1)
-	}
-
-	listModel := cli.NewProjectListModel(projects)
-	p := tea.NewProgram(listModel)
-
-	finalModel, err := p.Run()
-	if err != nil {
-		logger.Error("Error running project list", logger.Err(err))
-		os.Exit(1)
-	}
-
-	result, ok := finalModel.(cli.ProjectListModel)
-	if !ok {
-		logger.Error("Unexpected model type")
-		os.Exit(1)
-	}
-
-	if result.ShouldCreateNew() {
-		promptNewProject()
-		return
-	}
-
-	selectedProject := result.GetSelectedProject()
-	if selectedProject == nil {
-		os.Exit(0)
-	}
-
-	loadAndStartProject(selectedProject)
 }
 
 func promptNewProject() {
@@ -673,20 +638,9 @@ func loadAndStartProject(project *storage.Project) {
 	cli.StartWithProject(project.BaseURL, analysis, project, authProvider, version)
 }
 
-func handleResumeConversation() {
-	var project *storage.Project
-	var conversation *storage.Conversation
-
-	// If project name is specified, load it directly
-	if projectName != "" {
-		var err error
-		project, err = storage.FindProjectByName(projectName)
-		if err != nil {
-			logger.Error("Error loading project", logger.String("name", projectName), logger.Err(err))
-			os.Exit(1)
-		}
-	} else {
-		// Show project selector with conversation preview
+// handleFullscreenSelector shows fullscreen project+conversation selector
+func handleFullscreenSelector() {
+	for {
 		projects, err := storage.ListNamedProjects()
 		if err != nil {
 			logger.Error("Error loading projects", logger.Err(err))
@@ -699,64 +653,156 @@ func handleResumeConversation() {
 			os.Exit(0)
 		}
 
-		selectorModel := cli.NewProjectWithConversationsModel(projects)
-		p := tea.NewProgram(selectorModel)
+		selectorModel := cli.NewResumeSelectorModel(projects, version)
+		p := tea.NewProgram(selectorModel, tea.WithAltScreen())
 
 		finalModel, err := p.Run()
 		if err != nil {
-			logger.Error("Error running project selector", logger.Err(err))
+			logger.Error("Error running selector", logger.Err(err))
 			os.Exit(1)
 		}
 
-		result, ok := finalModel.(cli.ProjectWithConversationsModel)
+		result, ok := finalModel.(cli.ResumeSelectorModel)
 		if !ok || result.IsCancelled() {
 			os.Exit(0)
 		}
 
-		project = result.GetSelectedProject()
+		if result.ShouldCreateNewProject() {
+			// Try to create new project
+			created := promptNewProjectInteractive()
+			if !created {
+				// User cancelled, loop back to selector
+				continue
+			}
+			// If created successfully, reload and continue
+			continue
+		}
+
+		project := result.GetSelectedProject()
 		if project == nil {
-			os.Exit(0)
-		}
-	}
-
-	// If conversation ID is specified, load it directly
-	if conversationID != "" {
-		var err error
-		conversation, err = storage.LoadConversation(project.ID, conversationID)
-		if err != nil {
-			logger.Error("Error loading conversation", logger.String("id", conversationID), logger.Err(err))
-			os.Exit(1)
-		}
-	} else {
-		// Show conversation selector
-		convListModel := cli.NewConversationListModel(project)
-		p := tea.NewProgram(convListModel)
-
-		finalModel, err := p.Run()
-		if err != nil {
-			logger.Error("Error running conversation selector", logger.Err(err))
-			os.Exit(1)
-		}
-
-		result, ok := finalModel.(cli.ConversationListModel)
-		if !ok || result.IsCancelled() {
 			os.Exit(0)
 		}
 
 		if result.ShouldCreateNew() {
-			// Start new conversation (same as normal project load)
 			loadAndStartProject(project)
 			return
 		}
 
-		conversation = result.GetSelectedConversation()
-		if conversation == nil {
-			os.Exit(0)
+		conversation := result.GetSelectedConversation()
+		if conversation != nil {
+			loadAndStartConversation(project, conversation)
+			return
+		}
+	}
+}
+
+func promptNewProjectInteractive() bool {
+	creatorModel := cli.NewProjectCreatorModel()
+	p := tea.NewProgram(creatorModel, tea.WithAltScreen())
+
+	finalModel, err := p.Run()
+	if err != nil {
+		return false
+	}
+
+	result, ok := finalModel.(cli.ProjectCreatorModel)
+	if !ok || result.IsCancelled() || !result.IsConfirmed() {
+		return false
+	}
+
+	url, specPath, name := result.GetProjectData()
+	if result.NeedsConversion() {
+		convertedPath, err := converter.ConvertToOpenAPI(specPath, result.GetDetectedFormat())
+		if err != nil {
+			return false
+		}
+		specPath = convertedPath
+	}
+
+	projectID := generateUUID()
+	project, _, err := storage.CreateOrUpdateProject(projectID, name, url, specPath, "", false)
+	if err != nil {
+		return false
+	}
+
+	// Handle auth
+	authType, authData := result.GetAuthConfig()
+	if authType != "none" && authData != nil {
+		project.AuthConfig = &storage.AuthConfig{
+			Type:     authType,
+			Token:    authData["token"],
+			KeyName:  authData["key"],
+			KeyValue: authData["value"],
+			Location: authData["location"],
+			Username: authData["username"],
+			Password: authData["password"],
+		}
+		_ = storage.SaveProject(project)
+	}
+
+	return true
+}
+
+// handleProjectConversationSelector shows conversation selector for specific project
+func handleProjectConversationSelector(projectName string) {
+	project, err := storage.FindProjectByName(projectName)
+	if err != nil {
+		logger.Error("Project not found", logger.String("name", projectName))
+		os.Exit(1)
+	}
+
+	convListModel := cli.NewConversationListModel(project)
+	p := tea.NewProgram(convListModel, tea.WithAltScreen())
+
+	finalModel, err := p.Run()
+	if err != nil {
+		logger.Error("Error running conversation selector", logger.Err(err))
+		os.Exit(1)
+	}
+
+	result, ok := finalModel.(cli.ConversationListModel)
+	if !ok || result.IsCancelled() {
+		os.Exit(0)
+	}
+
+	if result.ShouldCreateNew() {
+		loadAndStartProject(project)
+		return
+	}
+
+	conversation := result.GetSelectedConversation()
+	if conversation != nil {
+		loadAndStartConversation(project, conversation)
+	}
+}
+
+// handleResumeByUUID resumes specific conversation by UUID
+func handleResumeByUUID(conversationID string) {
+	// Need to find which project this conversation belongs to
+	projects, err := storage.ListNamedProjects()
+	if err != nil {
+		logger.Error("Error loading projects", logger.Err(err))
+		os.Exit(1)
+	}
+
+	var foundProject *storage.Project
+	var foundConversation *storage.Conversation
+
+	for _, project := range projects {
+		conv, err := storage.LoadConversation(project.ID, conversationID)
+		if err == nil && conv != nil {
+			foundProject = project
+			foundConversation = conv
+			break
 		}
 	}
 
-	// Load conversation and start
-	loadAndStartConversation(project, conversation)
+	if foundProject == nil || foundConversation == nil {
+		logger.Error("Conversation not found", logger.String("id", conversationID))
+		os.Exit(1)
+	}
+
+	loadAndStartConversation(foundProject, foundConversation)
 }
 
 func loadAndStartConversation(project *storage.Project, conversation *storage.Conversation) {

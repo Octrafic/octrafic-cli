@@ -389,9 +389,9 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		tokenData := strings.TrimPrefix(msg.chunk, "\x00TOKENS:")
 		var input, output int64
 		if _, err := fmt.Sscanf(tokenData, "%d,%d", &input, &output); err == nil {
-			m.inputTokens += input
-			m.outputTokens += output
-			logger.Debug("Token counts updated", zap.Int64("input", m.inputTokens), zap.Int64("output", m.outputTokens))
+			m.streamedInputTokens = input
+			m.streamedOutputTokens = output
+			logger.Debug("Token counts for current message", zap.Int64("input", input), zap.Int64("output", output))
 		}
 		return m, waitForReasoning(msg.channel)
 	} else if strings.HasPrefix(msg.chunk, "\x00DONE:") {
@@ -411,15 +411,25 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		m.streamedTextChunk = ""
 
 		chatMsg := agent.ChatMessage{
-			Role:    "assistant",
-			Content: finalContent,
+			Role:         "assistant",
+			Content:      finalContent,
+			InputTokens:  m.streamedInputTokens,
+			OutputTokens: m.streamedOutputTokens,
 		}
 		if len(m.streamedToolCalls) > 0 {
 			chatMsg.FunctionCalls = m.streamedToolCalls
 		}
 		m.conversationHistory = append(m.conversationHistory, chatMsg)
 		m.saveChatMessageToConversation(chatMsg)
+
+		// Accumulate tokens to total counters
+		m.inputTokens += m.streamedInputTokens
+		m.outputTokens += m.streamedOutputTokens
+
+		// Reset streaming state
 		m.streamedAgentMessage = ""
+		m.streamedInputTokens = 0
+		m.streamedOutputTokens = 0
 
 		if len(m.streamedToolCalls) > 0 {
 			return m, tea.Tick(time.Second*1, func(time.Time) tea.Msg {
