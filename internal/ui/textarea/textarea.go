@@ -3,8 +3,8 @@
 package textarea
 
 import (
-	"crypto/sha256"
 	"fmt"
+	"hash/fnv"
 	"strconv"
 	"strings"
 	"unicode"
@@ -177,10 +177,12 @@ type line struct {
 	width int
 }
 
-// Hash returns a hash of the line.
+// Hash returns a hash of the line using FNV-1a (faster than SHA256).
 func (w line) Hash() string {
-	v := fmt.Sprintf("%s:%d", string(w.runes), w.width)
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(v)))
+	h := fnv.New64a()
+	h.Write([]byte(string(w.runes)))
+	h.Write([]byte(fmt.Sprintf(":%d", w.width)))
+	return fmt.Sprintf("%x", h.Sum64())
 }
 
 // Model is the Bubble Tea model for this text area element.
@@ -1506,16 +1508,18 @@ func wrap(runes []rune, width int) [][]rune {
 		} else {
 			// If the last character is a double-width rune, then we may not be able to add it to this line
 			// as it might cause us to go past the width.
-			lastCharLen := rw.RuneWidth(word[len(word)-1])
-			if uniseg.StringWidth(string(word))+lastCharLen > width {
-				// If the current line has any content, let's move to the next
-				// line because the current word fills up the entire line.
-				if len(lines[row]) > 0 {
-					row++
-					lines = append(lines, []rune{})
+			if len(word) > 0 {
+				lastCharLen := rw.RuneWidth(word[len(word)-1])
+				if uniseg.StringWidth(string(word))+lastCharLen > width {
+					// If the current line has any content, let's move to the next
+					// line because the current word fills up the entire line.
+					if len(lines[row]) > 0 {
+						row++
+						lines = append(lines, []rune{})
+					}
+					lines[row] = append(lines[row], word...)
+					word = nil
 				}
-				lines[row] = append(lines[row], word...)
-				word = nil
 			}
 		}
 	}
