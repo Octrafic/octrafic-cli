@@ -288,9 +288,7 @@ func (m *TestUIModel) saveAssistantMessage(content string) {
 }
 
 // loadConversationHistory loads and replays conversation history from database.
-// It reconstructs the conversation state including messages, token counts, and tool interactions.
 func (m *TestUIModel) loadConversationHistory() error {
-	// Only load history for resumed conversations
 	if m.conversationID == "" || !m.isLoadedConversation || m.currentProject == nil {
 		return nil
 	}
@@ -317,7 +315,6 @@ func (m *TestUIModel) loadConversationHistory() error {
 
 		switch msg.Type {
 		case "tool":
-			// Tool responses are represented as user messages with function responses in Anthropic API
 			chatMsg = agent.ChatMessage{
 				Role: "user",
 			}
@@ -332,7 +329,6 @@ func (m *TestUIModel) loadConversationHistory() error {
 				}
 			}
 
-			// Tool messages are added to history here and skip the common append at the end
 			m.conversationHistory = append(m.conversationHistory, chatMsg)
 
 			toolName := getString(msg.Metadata, "tool_name")
@@ -362,7 +358,6 @@ func (m *TestUIModel) loadConversationHistory() error {
 
 				m.showToolMessage(displayName, details)
 			}
-			// Skip appending to conversationHistory at the end since we already did it above
 			continue
 
 		case "user":
@@ -417,8 +412,6 @@ func (m *TestUIModel) loadConversationHistory() error {
 					}
 				}
 
-				// Restore historical token counts to the total counters.
-				// This ensures the UI displays accurate total usage for the entire conversation.
 				if inputTokens, ok := msg.Metadata["input_tokens"].(float64); ok {
 					chatMsg.InputTokens = int64(inputTokens)
 					m.inputTokens += int64(inputTokens)
@@ -441,7 +434,6 @@ func (m *TestUIModel) loadConversationHistory() error {
 			continue
 		}
 
-		// Add user and assistant messages to history (tool messages were already added above)
 		m.conversationHistory = append(m.conversationHistory, chatMsg)
 	}
 
