@@ -10,12 +10,45 @@ import (
 	"github.com/Octrafic/octrafic-cli/internal/updater"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"go.uber.org/zap"
 )
+
+func calculateTextareaHeight(text string, width int) int {
+	if text == "" {
+		return 1
+	}
+
+	lines := strings.Split(text, "\n")
+	totalLines := 0
+
+	for _, line := range lines {
+		if line == "" {
+			totalLines++
+			continue
+		}
+
+		lineLen := utf8.RuneCountInString(line)
+		if lineLen <= width {
+			totalLines++
+		} else {
+			wrappedLines := (lineLen + width - 1) / width
+			totalLines += wrappedLines
+		}
+	}
+
+	if totalLines < 1 {
+		totalLines = 1
+	} else if totalLines > 6 {
+		totalLines = 6
+	}
+
+	return totalLines
+}
 
 type releaseNotesMsg struct {
 	notes string
@@ -171,12 +204,11 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.textarea.SetValue(newValue)
 					m.textarea.SetCursor(len(newValue))
 
-					lines := strings.Count(m.textarea.Value(), "\n") + 1
-					if lines < 1 {
-						lines = 1
-					} else if lines > 6 {
-						lines = 6
+					textareaWidth := m.textarea.Width()
+					if textareaWidth <= 0 {
+						textareaWidth = m.width - 8
 					}
+					lines := calculateTextareaHeight(m.textarea.Value(), textareaWidth)
 					if m.textarea.Height() != lines {
 						m.textarea.SetHeight(lines)
 					}
@@ -964,12 +996,11 @@ func handleCommandsState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		m.showClearHint = false
 
-		lines := strings.Count(m.textarea.Value(), "\n") + 1
-		if lines < 1 {
-			lines = 1
-		} else if lines > 6 {
-			lines = 6
+		textareaWidth := m.textarea.Width()
+		if textareaWidth <= 0 {
+			textareaWidth = m.width - 8
 		}
+		lines := calculateTextareaHeight(m.textarea.Value(), textareaWidth)
 		if m.textarea.Height() != lines {
 			m.textarea.SetHeight(lines)
 		}
