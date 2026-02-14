@@ -181,7 +181,7 @@ type line struct {
 func (w line) Hash() string {
 	h := fnv.New64a()
 	h.Write([]byte(string(w.runes)))
-	fmt.Fprintf(h, ":%d", w.width)
+	_, _ = fmt.Fprintf(h, ":%d", w.width)
 	return fmt.Sprintf("%x", h.Sum64())
 }
 
