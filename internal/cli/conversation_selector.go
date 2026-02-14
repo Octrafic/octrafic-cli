@@ -110,12 +110,12 @@ func (m ProjectWithConversationsModel) View() string {
 		}
 
 		timeAgo := formatTimeAgo(project.LastAccessedAt)
-		
+
 		// Format URL (remove protocol for cleaner look)
 		url := project.BaseURL
 		url = strings.TrimPrefix(url, "https://")
 		url = strings.TrimPrefix(url, "http://")
-		
+
 		// Truncate if too long
 		name := project.Name
 		if len(name) > 30 {
@@ -124,10 +124,10 @@ func (m ProjectWithConversationsModel) View() string {
 		if len(url) > 42 {
 			url = url[:39] + "..."
 		}
-		
+
 		// Build table row
 		data := fmt.Sprintf("%-30s %-42s %s", name, url, timeAgo)
-		
+
 		s.WriteString(prefix)
 		s.WriteString(style.Render(data))
 		s.WriteString("\n")

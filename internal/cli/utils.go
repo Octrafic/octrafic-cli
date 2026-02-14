@@ -273,20 +273,6 @@ func (m *TestUIModel) saveChatMessageToConversation(msg agent.ChatMessage) {
 	_ = storage.SaveMessage(m.currentProject.ID, m.conversationID, msg.Role, msg.Content, metadata)
 }
 
-// saveUserMessage displays and saves a user message to conversation.
-func (m *TestUIModel) saveUserMessage(content string) {
-	m.addMessage("")
-	m.addMessage(renderUserLabel() + " " + content)
-	m.addMessage("")
-
-	m.saveMessageToConversation("user", content, nil)
-}
-
-// saveAssistantMessage saves an assistant message to conversation.
-func (m *TestUIModel) saveAssistantMessage(content string) {
-	m.saveMessageToConversation("assistant", content, nil)
-}
-
 // loadConversationHistory loads and replays conversation history from database.
 func (m *TestUIModel) loadConversationHistory() error {
 	if m.conversationID == "" || !m.isLoadedConversation || m.currentProject == nil {

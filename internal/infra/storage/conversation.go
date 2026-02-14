@@ -100,7 +100,7 @@ func CreateConversation(projectID, conversationID, title string) (*Conversation,
 	if err != nil {
 		return nil, fmt.Errorf("failed to open conversation database: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := initConversationDB(db); err != nil {
 		return nil, fmt.Errorf("failed to initialize conversation database: %w", err)
@@ -131,7 +131,7 @@ func LoadConversation(projectID, conversationID string) (*Conversation, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open conversation database: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	conv := &Conversation{}
 	query := `SELECT id, project_id, title, created_at, updated_at FROM conversation WHERE id = ?`
@@ -204,10 +204,10 @@ func SaveMessage(projectID, conversationID, messageType, content string, metadat
 	if err != nil {
 		return fmt.Errorf("failed to open conversation database: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	var metadataJSON *string
-	if metadata != nil && len(metadata) > 0 {
+	if len(metadata) > 0 {
 		jsonBytes, err := json.Marshal(metadata)
 		if err != nil {
 			return fmt.Errorf("failed to marshal metadata: %w", err)
@@ -244,7 +244,7 @@ func GetMessages(projectID, conversationID string) ([]*Message, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open conversation database: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	query := `SELECT id, conversation_id, type, content, metadata, timestamp 
 	          FROM messages 
@@ -253,7 +253,7 @@ func GetMessages(projectID, conversationID string) ([]*Message, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query messages: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var messages []*Message
 	for rows.Next() {

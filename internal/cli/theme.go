@@ -2,7 +2,7 @@ package cli
 
 import (
 	"strings"
-	
+
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -15,7 +15,7 @@ const Logo = `░█▀█░█▀▀░▀█▀░█▀▄░█▀█░█
 func RenderLogo() string {
 	logoLines := strings.Split(Logo, "\n")
 	styledLogo := make([]string, len(logoLines))
-	
+
 	for i, line := range logoLines {
 		var styledLine strings.Builder
 		for _, char := range line {
@@ -28,7 +28,7 @@ func RenderLogo() string {
 		}
 		styledLogo[i] = styledLine.String()
 	}
-	
+
 	return strings.Join(styledLogo, "\n")
 }
 
