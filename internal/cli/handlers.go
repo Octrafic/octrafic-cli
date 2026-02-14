@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// ToolCallData represents a tool call with its arguments.
 type ToolCallData struct {
 	ID   string         `json:"id"`
 	Name string         `json:"name"`
@@ -38,6 +39,7 @@ type startTestGroupMsg struct {
 	toolID   string
 }
 
+// sendChatMessage initiates a streaming chat request with the agent.
 func (m *TestUIModel) sendChatMessage(_ string) tea.Cmd {
 	return func() tea.Msg {
 		time.Sleep(100 * time.Millisecond)
@@ -74,14 +76,12 @@ func (m *TestUIModel) sendChatMessage(_ string) tea.Cmd {
 			go func() {
 				resp, err := m.localAgent.ChatStream(m.conversationHistory, m.thinkingEnabled,
 					func(chunk string, isThought bool) {
-						// Check if stream was cancelled
 						select {
 						case <-cancelChan:
 							return
 						default:
 						}
 
-						// Send chunk with isThought flag
 						if isThought {
 							logger.Debug("Received THINK chunk", logger.String("chunk", chunk[:min(len(chunk), 50)]+"..."))
 							select {
@@ -101,14 +101,12 @@ func (m *TestUIModel) sendChatMessage(_ string) tea.Cmd {
 				resultChan <- chatResult{response: resp, err: err}
 			}()
 
-			// Wait for either completion or cancellation
 			select {
 			case <-cancelChan:
 				logger.Info("ChatStream cancelled by user")
 				streamChan <- "\x00CANCELLED:"
 				return
 			case result := <-resultChan:
-				// Check again if cancelled during processing
 				select {
 				case <-cancelChan:
 					logger.Info("ChatStream cancelled by user")
@@ -142,6 +140,7 @@ func (m *TestUIModel) sendChatMessage(_ string) tea.Cmd {
 	}
 }
 
+// waitForReasoning waits for the next chunk from the streaming channel.
 func waitForReasoning(ch <-chan string) tea.Cmd {
 	return func() tea.Msg {
 		chunk, ok := <-ch
@@ -152,6 +151,7 @@ func waitForReasoning(ch <-chan string) tea.Cmd {
 	}
 }
 
+// executeTool executes a tool call and returns its result.
 func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 	return func() tea.Msg {
 		time.Sleep(300 * time.Millisecond)
@@ -400,14 +400,18 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 			}
 
 			if toolID != "" {
-				m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+				chatMsg := agent.ChatMessage{
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
 						ID:       toolID,
 						Name:     "ExecuteTest",
 						Response: resultMap,
 					},
-				})
+				}
+				m.conversationHistory = append(m.conversationHistory, chatMsg)
+
+				// Save function response to conversation
+				m.saveChatMessageToConversation(chatMsg)
 
 				// Send back to agent to continue
 				return m.sendChatMessage("")
@@ -463,14 +467,18 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 			// Add tool result to conversation history as function response
 			// Only if this was from a Claude tool_use (has toolID)
 			if toolID != "" {
-				m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+				chatMsg := agent.ChatMessage{
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
 						ID:       toolID,
 						Name:     "ExecuteTestGroup",
 						Response: resultMap,
 					},
-				})
+				}
+				m.conversationHistory = append(m.conversationHistory, chatMsg)
+
+				// Save function response to conversation
+				m.saveChatMessageToConversation(chatMsg)
 
 				// Send back to agent
 				return m.sendChatMessage("")
@@ -488,14 +496,18 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 				maps.Copy(resultMap, r)
 			}
 
-			m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+			chatMsg := agent.ChatMessage{
 				Role: "user",
 				FunctionResponse: &agent.FunctionResponseData{
 					ID:       toolID,
 					Name:     "get_endpoints_details",
 					Response: resultMap,
 				},
-			})
+			}
+			m.conversationHistory = append(m.conversationHistory, chatMsg)
+
+			// Save function response to conversation
+			m.saveChatMessageToConversation(chatMsg)
 
 			// Send back to agent to continue
 			return m.sendChatMessage("")
@@ -512,14 +524,18 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 			m.addMessage(m.subtleStyle.Render("   " + filePath))
 
 			if toolID != "" {
-				m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+				chatMsg := agent.ChatMessage{
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
 						ID:       toolID,
 						Name:     "GenerateReport",
 						Response: resultMap,
 					},
-				})
+				}
+				m.conversationHistory = append(m.conversationHistory, chatMsg)
+
+				// Save function response to conversation
+				m.saveChatMessageToConversation(chatMsg)
 
 				return m.sendChatMessage("")
 			}
@@ -536,14 +552,18 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 				maps.Copy(resultMap, r)
 			}
 
-			m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+			chatMsg := agent.ChatMessage{
 				Role: "user",
 				FunctionResponse: &agent.FunctionResponseData{
 					ID:       toolID,
 					Name:     "GenerateTestPlan",
 					Response: resultMap,
 				},
-			})
+			}
+			m.conversationHistory = append(m.conversationHistory, chatMsg)
+
+			// Save function response to conversation
+			m.saveChatMessageToConversation(chatMsg)
 
 			// Send back to agent to continue
 			return m.sendChatMessage("")

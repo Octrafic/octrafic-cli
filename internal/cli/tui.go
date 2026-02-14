@@ -130,6 +130,8 @@ type TestUIModel struct {
 	thinkingEnabled          bool   // Whether to use /think tag for reasoning
 	lastMessageRole          string // Track who sent the last message ("user" or "assistant")
 	conversationHistory      []agent.ChatMessage
+	conversationID           string // Current conversation UUID
+	isLoadedConversation     bool   // Whether this is a loaded conversation
 	currentToolCall          *agent.ToolCall
 	pendingToolCall          *agent.ToolCall
 	pendingTestGroupToolCall *agent.ToolCall  // Saved ExecuteTestGroup tool call for test selection
@@ -137,6 +139,8 @@ type TestUIModel struct {
 	streamedAgentMessage     string           // Agent message received from stream, saved to history when DONE
 	streamedReasoningChunk   string
 	streamedTextChunk        string
+	streamedInputTokens      int64 // Tokens for current streaming message
+	streamedOutputTokens     int64 // Tokens for current streaming message
 	confirmationChoice       int
 	cancelStream             chan struct{} // Channel to cancel ongoing stream
 
@@ -273,41 +277,12 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 		model.latestVersion = cfg.LatestVersion
 	}
 
-	// Welcome message with header style
-	subtleColor := Theme.TextMuted
-	valueColor := Theme.Cyan
-
-	// ASCII art logo
-	logo := strings.Split(Logo, "\n")
-
-	// Style the logo with gradient colors - empty blocks (░) get dark color
-	styledLogo := make([]string, len(logo))
-	for i, line := range logo {
-		var styledLine strings.Builder
-		for _, char := range line {
-			if char == '░' {
-				styledLine.WriteString(lipgloss.NewStyle().Foreground(Theme.TextSubtle).Render(string(char)))
-			} else {
-				color := Theme.LogoGradient[i%len(Theme.LogoGradient)]
-				styledLine.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Bold(true).Render(string(char)))
-			}
-		}
-		styledLogo[i] = styledLine.String()
-	}
-
-	// Info line with colors
-	infoLine := lipgloss.NewStyle().Foreground(subtleColor).Render("Testing: ") +
-		lipgloss.NewStyle().Foreground(valueColor).Render(baseURL)
-
-	// Add to viewport
-	model.addMessage("")
-	for _, line := range styledLogo {
+	// Add header (logo + info)
+	for _, line := range model.renderHeader() {
 		model.addMessage(line)
 	}
-	model.addMessage("")
-	model.addMessage(infoLine)
-	model.addMessage(lipgloss.NewStyle().Foreground(subtleColor).Render("──────────────────────────────────────────────────────────────────────"))
-	model.addMessage("")
+
+	// Add welcome message
 	model.addMessage("Hi! I can help you test your API. You can ask me questions or tell me to run tests.")
 	model.lastMessageRole = "assistant" // Mark that agent sent the welcome message
 
