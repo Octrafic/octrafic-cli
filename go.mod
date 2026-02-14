@@ -1,6 +1,6 @@
 module github.com/Octrafic/octrafic-cli
 
-go 1.26
+go 1.25
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.17.0

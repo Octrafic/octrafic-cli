@@ -200,6 +200,9 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return *newM, cmd
 					}
 
+					// Create conversation on first user message if it doesn't exist yet.
+					// For resumed conversations (isLoadedConversation=true), skip this check
+					// since the conversation already exists in the database.
 					if m.conversationID != "" && !m.isLoadedConversation && m.currentProject != nil && !m.currentProject.IsTemporary {
 						if _, err := storage.LoadConversation(m.currentProject.ID, m.conversationID); err != nil {
 							title := userInput
@@ -208,6 +211,12 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							}
 							_, _ = storage.CreateConversation(m.currentProject.ID, m.conversationID, title)
 						}
+					}
+
+					// After first message in resumed conversation, mark it as no longer "just loaded"
+					// to allow normal conversation flow.
+					if m.isLoadedConversation {
+						m.isLoadedConversation = false
 					}
 
 					userMessage := lipgloss.NewStyle().
@@ -386,6 +395,7 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		}
 		return m, waitForReasoning(msg.channel)
 	} else if strings.HasPrefix(msg.chunk, "\x00TOKENS:") {
+		// Store token counts temporarily - they will be added to totals when message completes (DONE:)
 		tokenData := strings.TrimPrefix(msg.chunk, "\x00TOKENS:")
 		var input, output int64
 		if _, err := fmt.Sscanf(tokenData, "%d,%d", &input, &output); err == nil {
@@ -422,9 +432,12 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		m.conversationHistory = append(m.conversationHistory, chatMsg)
 		m.saveChatMessageToConversation(chatMsg)
 
+		// Add current message tokens to total counters.
+		// For resumed conversations, historical tokens were already added during loadConversationHistory().
 		m.inputTokens += m.streamedInputTokens
 		m.outputTokens += m.streamedOutputTokens
 
+		// Reset streamed counters for next message
 		m.streamedAgentMessage = ""
 		m.streamedInputTokens = 0
 		m.streamedOutputTokens = 0
