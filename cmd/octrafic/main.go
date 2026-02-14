@@ -51,6 +51,8 @@ var (
 	debugFilePath string
 
 	forceOnboarding bool
+
+	resumeConversationID string
 )
 
 var rootCmd = &cobra.Command{
@@ -75,17 +77,25 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 			return
 		}
 
+		// Handle --resume <uuid> flag
+		if resumeConversationID != "" {
+			handleResumeByUUID(resumeConversationID)
+			return
+		}
+
 		hasURL := apiURL != ""
 		hasSpec := specFile != ""
 		hasName := projectName != ""
 
+		// If no flags provided, show fullscreen project+conversation selector
 		if !hasURL && !hasSpec && !hasName {
-			showProjectList()
+			handleFullscreenSelector()
 			return
 		}
 
+		// If only project name provided, show conversation selector for that project
 		if hasName && !hasURL && !hasSpec {
-			loadProjectByName(projectName)
+			handleProjectConversationSelector(projectName)
 			return
 		}
 		if !hasURL {
@@ -214,6 +224,8 @@ func printCustomHelp(cmd *cobra.Command) {
 	printFlag(cmd, "url", "u", "Base URL of the API to test")
 	printFlag(cmd, "spec", "s", "Path to API specification file (OpenAPI/Swagger)")
 	printFlag(cmd, "name", "n", "Project name for saving/loading configuration")
+	printFlag(cmd, "resume", "r", "Resume a previous conversation")
+	printFlag(cmd, "conversation", "", "Specific conversation ID to resume")
 
 	fmt.Printf("\nAuthentication:\n")
 	printFlag(cmd, "auth", "", "Authentication type: none|bearer|apikey|basic")
@@ -308,6 +320,8 @@ func init() {
 
 	rootCmd.Flags().StringVar(&debugFilePath, "debug-file", "", "Path to debug log file (enables detailed logging)")
 	rootCmd.Flags().BoolVar(&forceOnboarding, "onboarding", false, "Force run onboarding wizard")
+
+	rootCmd.Flags().StringVarP(&resumeConversationID, "resume", "r", "", "Resume a specific conversation by UUID")
 
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		initLogger()
@@ -443,163 +457,6 @@ func generateUUID() string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 }
 
-func showProjectList() {
-	projects, err := storage.ListNamedProjects()
-	if err != nil {
-		logger.Error("Error loading projects", logger.Err(err))
-		os.Exit(1)
-	}
-
-	listModel := cli.NewProjectListModel(projects)
-	p := tea.NewProgram(listModel)
-
-	finalModel, err := p.Run()
-	if err != nil {
-		logger.Error("Error running project list", logger.Err(err))
-		os.Exit(1)
-	}
-
-	result, ok := finalModel.(cli.ProjectListModel)
-	if !ok {
-		logger.Error("Unexpected model type")
-		os.Exit(1)
-	}
-
-	if result.ShouldCreateNew() {
-		promptNewProject()
-		return
-	}
-
-	selectedProject := result.GetSelectedProject()
-	if selectedProject == nil {
-		os.Exit(0)
-	}
-
-	loadAndStartProject(selectedProject)
-}
-
-func promptNewProject() {
-	creatorModel := cli.NewProjectCreatorModel()
-	p := tea.NewProgram(creatorModel)
-
-	finalModel, err := p.Run()
-	if err != nil {
-		logger.Error("Error running project creator", logger.Err(err))
-		os.Exit(1)
-	}
-
-	result, ok := finalModel.(cli.ProjectCreatorModel)
-	if !ok {
-		logger.Error("Unexpected model type")
-		os.Exit(1)
-	}
-
-	if result.IsCancelled() {
-		fmt.Println("\nProject creation cancelled")
-		os.Exit(0)
-	}
-
-	if !result.IsConfirmed() {
-		os.Exit(0)
-	}
-
-	url, specPath, name := result.GetProjectData()
-	if result.NeedsConversion() {
-		fmt.Printf("\nConverting %s to OpenAPI format...\n", result.GetDetectedFormat())
-
-		convertedPath, err := converter.ConvertToOpenAPI(specPath, result.GetDetectedFormat())
-		if err != nil {
-			logger.Error("Conversion failed", logger.Err(err))
-			os.Exit(1)
-		}
-
-		fmt.Printf("Converted specification saved to: %s\n", convertedPath)
-		specPath = convertedPath
-	}
-
-	projectID := generateUUID()
-	project, _, err := storage.CreateOrUpdateProject(projectID, name, url, specPath, "", false)
-	if err != nil {
-		logger.Error("Error creating project", logger.Err(err))
-		os.Exit(1)
-	}
-
-	// Handle auth configuration from wizard
-	var authProvider auth.AuthProvider = &auth.NoAuth{}
-	authType, authData := result.GetAuthConfig()
-	if authType != "none" && authData != nil {
-		// Create auth provider from wizard data
-		switch authType {
-		case "bearer":
-			authProvider = auth.NewBearerAuth(authData["token"])
-		case "apikey":
-			location := authData["location"]
-			if location == "" {
-				location = "header"
-			}
-			authProvider = auth.NewAPIKeyAuth(authData["key"], authData["value"], location)
-		case "basic":
-			authProvider = auth.NewBasicAuth(authData["username"], authData["password"])
-		}
-
-		// Save auth config with project
-		project.AuthConfig = &storage.AuthConfig{
-			Type:     authType,
-			Token:    authData["token"],
-			KeyName:  authData["key"],
-			KeyValue: authData["value"],
-			Location: authData["location"],
-			Username: authData["username"],
-			Password: authData["password"],
-		}
-		if err := storage.SaveProject(project); err != nil {
-			fmt.Printf("Warning: failed to save authentication: %v\n", err)
-		} else {
-			fmt.Println("✓ Authentication configured and saved with project")
-		}
-	}
-
-	fmt.Printf("\nProject '%s' created successfully!\n", name)
-	fmt.Printf("  Base URL: %s\n", url)
-	fmt.Printf("  Spec: %s\n", specPath)
-	fmt.Println()
-	fmt.Println("You can load this project later with:")
-	fmt.Printf("  octrafic -n \"%s\"\n", name)
-
-	specContent, err := parser.ParseSpecification(specPath)
-	if err != nil {
-		logger.Error("Error parsing specification", logger.Err(err))
-		os.Exit(1)
-	}
-
-	analysis, err := analyzer.AnalyzeAPI(url, specContent)
-	if err != nil {
-		logger.Error("Error analyzing API", logger.Err(err))
-		os.Exit(1)
-	}
-
-	cli.StartWithProject(url, analysis, project, authProvider, version)
-}
-
-func loadProjectByName(name string) {
-	project, err := storage.FindProjectByName(name)
-	if err != nil {
-		logger.Error("Error loading project", logger.String("name", name), logger.Err(err))
-		os.Exit(1)
-	}
-
-	if clearAuth {
-		project.ClearAuth()
-		if err := storage.SaveProject(project); err != nil {
-			fmt.Printf("Warning: failed to clear authentication: %v\n", err)
-		} else {
-			fmt.Println("✓ Authentication cleared from project")
-		}
-	}
-
-	loadAndStartProject(project)
-}
-
 func loadAndStartProject(project *storage.Project) {
 	project.LastAccessedAt = time.Now()
 	if err := storage.SaveProject(project); err != nil {
@@ -657,6 +514,231 @@ func loadAndStartProject(project *storage.Project) {
 	}
 
 	cli.StartWithProject(project.BaseURL, analysis, project, authProvider, version)
+}
+
+// handleFullscreenSelector shows fullscreen project+conversation selector
+func handleFullscreenSelector() {
+	for {
+		projects, err := storage.ListNamedProjects()
+		if err != nil {
+			logger.Error("Error loading projects", logger.Err(err))
+			os.Exit(1)
+		}
+
+		if len(projects) == 0 {
+			fmt.Println("No projects found. Create a project first:")
+			fmt.Println("  octrafic -u <api-url> -s <spec-file> -n <project-name>")
+			os.Exit(0)
+		}
+
+		selectorModel := cli.NewResumeSelectorModel(projects, version)
+		p := tea.NewProgram(selectorModel, tea.WithAltScreen())
+
+		finalModel, err := p.Run()
+		if err != nil {
+			logger.Error("Error running selector", logger.Err(err))
+			os.Exit(1)
+		}
+
+		result, ok := finalModel.(cli.ResumeSelectorModel)
+		if !ok || result.IsCancelled() {
+			os.Exit(0)
+		}
+
+		if result.ShouldCreateNewProject() {
+			promptNewProjectInteractive()
+			continue
+		}
+
+		project := result.GetSelectedProject()
+		if project == nil {
+			os.Exit(0)
+		}
+
+		if result.ShouldCreateNew() {
+			loadAndStartProject(project)
+			return
+		}
+
+		conversation := result.GetSelectedConversation()
+		if conversation != nil {
+			loadAndStartConversation(project, conversation)
+			return
+		}
+	}
+}
+
+func promptNewProjectInteractive() bool {
+	creatorModel := cli.NewProjectCreatorModel()
+	p := tea.NewProgram(creatorModel, tea.WithAltScreen())
+
+	finalModel, err := p.Run()
+	if err != nil {
+		return false
+	}
+
+	result, ok := finalModel.(cli.ProjectCreatorModel)
+	if !ok || result.IsCancelled() || !result.IsConfirmed() {
+		return false
+	}
+
+	url, specPath, name := result.GetProjectData()
+	if result.NeedsConversion() {
+		convertedPath, err := converter.ConvertToOpenAPI(specPath, result.GetDetectedFormat())
+		if err != nil {
+			return false
+		}
+		specPath = convertedPath
+	}
+
+	projectID := generateUUID()
+	project, _, err := storage.CreateOrUpdateProject(projectID, name, url, specPath, "", false)
+	if err != nil {
+		return false
+	}
+
+	// Handle auth
+	authType, authData := result.GetAuthConfig()
+	if authType != "none" && authData != nil {
+		project.AuthConfig = &storage.AuthConfig{
+			Type:     authType,
+			Token:    authData["token"],
+			KeyName:  authData["key"],
+			KeyValue: authData["value"],
+			Location: authData["location"],
+			Username: authData["username"],
+			Password: authData["password"],
+		}
+		_ = storage.SaveProject(project)
+	}
+
+	return true
+}
+
+// handleProjectConversationSelector shows conversation selector for specific project
+func handleProjectConversationSelector(projectName string) {
+	project, err := storage.FindProjectByName(projectName)
+	if err != nil {
+		logger.Error("Project not found", logger.String("name", projectName))
+		os.Exit(1)
+	}
+
+	convListModel := cli.NewConversationListModel(project)
+	p := tea.NewProgram(convListModel, tea.WithAltScreen())
+
+	finalModel, err := p.Run()
+	if err != nil {
+		logger.Error("Error running conversation selector", logger.Err(err))
+		os.Exit(1)
+	}
+
+	result, ok := finalModel.(cli.ConversationListModel)
+	if !ok || result.IsCancelled() {
+		os.Exit(0)
+	}
+
+	if result.ShouldCreateNew() {
+		loadAndStartProject(project)
+		return
+	}
+
+	conversation := result.GetSelectedConversation()
+	if conversation != nil {
+		loadAndStartConversation(project, conversation)
+	}
+}
+
+// handleResumeByUUID resumes specific conversation by UUID
+func handleResumeByUUID(conversationID string) {
+	// Need to find which project this conversation belongs to
+	projects, err := storage.ListNamedProjects()
+	if err != nil {
+		logger.Error("Error loading projects", logger.Err(err))
+		os.Exit(1)
+	}
+
+	var foundProject *storage.Project
+	var foundConversation *storage.Conversation
+
+	for _, project := range projects {
+		conv, err := storage.LoadConversation(project.ID, conversationID)
+		if err == nil && conv != nil {
+			foundProject = project
+			foundConversation = conv
+			break
+		}
+	}
+
+	if foundProject == nil || foundConversation == nil {
+		logger.Error("Conversation not found", logger.String("id", conversationID))
+		os.Exit(1)
+	}
+
+	loadAndStartConversation(foundProject, foundConversation)
+}
+
+func loadAndStartConversation(project *storage.Project, conversation *storage.Conversation) {
+	// Update last accessed time
+	project.LastAccessedAt = time.Now()
+	if err := storage.SaveProject(project); err != nil {
+		fmt.Printf("Warning: failed to update last accessed time: %v\n", err)
+	}
+
+	// Build auth provider
+	var authProvider auth.AuthProvider
+	if authType != "" && authType != "none" {
+		authProvider = buildAuthFromFlags()
+	} else if authEnv, exists := os.LookupEnv(authTypeEnvVar); exists && authEnv != "" {
+		authProvider = buildAuthFromEnvironments()
+	} else if project.HasAuth() {
+		authProvider = buildAuthFromProject(project)
+		fmt.Printf("✓ Using saved authentication (%s)\n", project.AuthConfig.Type)
+	} else {
+		authProvider = &auth.NoAuth{}
+	}
+
+	// Load analysis
+	var analysis *analyzer.Analysis
+
+	if storage.HasEndpoints(project.ID, project.IsTemporary) {
+		fmt.Printf("✓ Using cached endpoints\n")
+		analysis = &analyzer.Analysis{
+			BaseURL:      project.BaseURL,
+			Timestamp:    time.Now(),
+			EndpointInfo: make(map[string]analyzer.EndpointAnalysis),
+		}
+	} else {
+		if err := storage.ValidateSpecPath(project.SpecPath); err != nil {
+			fmt.Printf("⚠️  Warning: %v\n", err)
+			fmt.Printf("Please provide a new path to specification file: ")
+			var newPath string
+			_, _ = fmt.Scanln(&newPath)
+			if err := storage.ValidateSpecPath(newPath); err != nil {
+				logger.Error("Spec path validation failed", logger.Err(err))
+				os.Exit(1)
+			}
+			project.SpecPath = newPath
+			if err := storage.SaveProject(project); err != nil {
+				logger.Warn("Failed to save updated spec path", logger.Err(err))
+			}
+		}
+
+		specContent, err := parser.ParseSpecification(project.SpecPath)
+		if err != nil {
+			logger.Error("Error parsing specification", logger.Err(err))
+			os.Exit(1)
+		}
+
+		analysis, err = analyzer.AnalyzeAPI(project.BaseURL, specContent)
+		if err != nil {
+			logger.Error("Error analyzing API", logger.Err(err))
+			os.Exit(1)
+		}
+	}
+
+	fmt.Printf("✓ Loading conversation: %s\n", conversation.Title)
+
+	cli.StartWithConversation(project.BaseURL, analysis, project, authProvider, version, conversation.ID)
 }
 
 func main() {

@@ -17,13 +17,14 @@ import (
 	"go.uber.org/zap"
 )
 
-type releaseNotesMsg struct {
+
+type releaseNotesMsg struct{
 	notes string
 	url   string
 	err   error
 }
 
-// Update handles messages and updates the model
+// Update handles all incoming messages and updates the model state.
 func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -36,9 +37,8 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.viewport.Width = msg.Width - 4
-		// Account for border (2 lines) + status line + help text + spacing
 		m.viewport.Height = msg.Height - 7
-		m.textarea.SetWidth(msg.Width - 8) // Account for border padding (2 chars each side)
+		m.textarea.SetWidth(msg.Width - 8)
 		m.updateViewport()
 
 	case streamReasoningMsg:
@@ -58,9 +58,7 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.agentState = StateIdle
 
 		if msg.err != nil {
-			if m.lastMessageRole != "assistant" {
-				m.addMessage(renderAgentLabel())
-			}
+			m.addMessage("")
 			m.addMessage(m.errorStyle.Render("Error - " + msg.err.Error()))
 			m.addMessage("")
 		} else {
@@ -70,12 +68,15 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			m.lastMessageRole = "assistant"
 
-			m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
+			chatMsg := agent.ChatMessage{
 				Role:             "assistant",
 				Content:          msg.message,
 				ReasoningContent: msg.reasoning,
 				FunctionCalls:    msg.toolCalls,
-			})
+			}
+
+			m.conversationHistory = append(m.conversationHistory, chatMsg)
+			m.saveChatMessageToConversation(chatMsg)
 
 			if len(msg.toolCalls) > 0 {
 				toolCall := msg.toolCalls[0]
@@ -171,15 +172,11 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.textarea.SetValue(newValue)
 					m.textarea.SetCursor(len(newValue))
 
-					lines := strings.Count(m.textarea.Value(), "\n") + 1
+					lines := m.textarea.LineCount()
 					if lines < 1 {
 						lines = 1
-					} else if lines > 6 {
-						lines = 6
 					}
-					if m.textarea.Height() != lines {
-						m.textarea.SetHeight(lines)
-					}
+					m.textarea.SetHeight(lines)
 
 					return m, nil
 				}
@@ -200,12 +197,26 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return *newM, cmd
 					}
 
+					if m.conversationID != "" && !m.isLoadedConversation && m.currentProject != nil && !m.currentProject.IsTemporary {
+						if _, err := storage.LoadConversation(m.currentProject.ID, m.conversationID); err != nil {
+							title := userInput
+							if len(title) > 100 {
+								title = title[:97] + "..."
+							}
+							_, _ = storage.CreateConversation(m.currentProject.ID, m.conversationID, title)
+						}
+					}
+
+					if m.isLoadedConversation {
+						m.isLoadedConversation = false
+					}
+
 					userMessage := lipgloss.NewStyle().
 						Foreground(Theme.TextMuted).
 						Render("> ") + userInput
 					m.addMessage("")
 					m.addMessage(userMessage)
-
+					m.saveMessageToConversation("user", userInput, nil)
 					m.lastMessageRole = "user"
 
 					m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
@@ -213,9 +224,7 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Content: userInput,
 					})
 
-					// Create new cancel channel for this stream
 					m.cancelStream = make(chan struct{})
-
 					m.agentState = StateProcessing
 					m.animationFrame = 0
 					m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
@@ -266,15 +275,11 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			m.showClearHint = false
 
-			lines := strings.Count(m.textarea.Value(), "\n") + 1
+			lines := m.textarea.LineCount()
 			if lines < 1 {
 				lines = 1
-			} else if lines > 6 {
-				lines = 6
 			}
-			if m.textarea.Height() != lines {
-				m.textarea.SetHeight(lines)
-			}
+			m.textarea.SetHeight(lines)
 
 			input := m.textarea.Value()
 			if strings.HasPrefix(input, "/") && len(input) > 0 {
@@ -324,9 +329,8 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleStreamingMsg handles streaming reasoning chunks from the backend
+// handleStreamingMsg processes streaming chunks from the agent.
 func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.Cmd) {
-	// Log message type for debugging
 	msgType := "UNKNOWN"
 	if strings.HasPrefix(msg.chunk, "\x00ERROR:") {
 		msgType = "ERROR"
@@ -354,59 +358,73 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		return m, nil
 	} else if strings.HasPrefix(msg.chunk, "\x00AGENT:") {
 		agentMsg := strings.TrimPrefix(msg.chunk, "\x00AGENT:")
-		// Reasoning is already displayed live, so we don't display it here anymore.
 		m.streamedReasoningChunk = ""
 
-		// If we have accumulated streamed content, display it
 		displayedContent := false
 		if m.streamedTextChunk != "" {
 			logger.Debug("Displaying accumulated content", zap.Int("length", len(m.streamedTextChunk)))
+			if m.streamedAgentMessage == "" {
+				m.streamedAgentMessage = m.streamedTextChunk
+			}
 			m.addMessage("")
 			m.addMessage(renderMarkdown(m.streamedTextChunk))
 			m.updateViewport()
 			m.streamedTextChunk = ""
 			displayedContent = true
 		}
-		// Only display agentMsg if we didn't just display accumulated content
-		// (OpenAI/OpenRouter returns accumulated content in agentMsg, so we'd duplicate)
 		if agentMsg != "" && !displayedContent {
 			logger.Debug("Displaying agent message", zap.Int("length", len(agentMsg)))
 			m.streamedAgentMessage = agentMsg
 			m.addMessage("")
 			m.addMessage(renderMarkdown(agentMsg))
 			m.updateViewport()
+		} else if agentMsg != "" && displayedContent {
+			m.streamedAgentMessage = agentMsg
 		}
 		return m, waitForReasoning(msg.channel)
 	} else if strings.HasPrefix(msg.chunk, "\x00TOKENS:") {
 		tokenData := strings.TrimPrefix(msg.chunk, "\x00TOKENS:")
 		var input, output int64
 		if _, err := fmt.Sscanf(tokenData, "%d,%d", &input, &output); err == nil {
-			m.inputTokens += input
-			m.outputTokens += output
-			logger.Debug("Token counts updated", zap.Int64("input", m.inputTokens), zap.Int64("output", m.outputTokens))
+			m.streamedInputTokens = input
+			m.streamedOutputTokens = output
+			logger.Debug("Token counts for current message", zap.Int64("input", input), zap.Int64("output", output))
 		}
 		return m, waitForReasoning(msg.channel)
 	} else if strings.HasPrefix(msg.chunk, "\x00DONE:") {
-		// Display any accumulated content before finishing
 		if m.streamedTextChunk != "" {
+			logger.Debug("Displaying remaining content in DONE", zap.Int("length", len(m.streamedTextChunk)))
 			m.addMessage("")
 			m.addMessage(renderMarkdown(m.streamedTextChunk))
 			m.updateViewport()
 		}
-		// Reset streaming state
+
+		finalContent := m.streamedAgentMessage
+		if finalContent == "" && m.streamedTextChunk != "" {
+			finalContent = m.streamedTextChunk
+		}
+
 		m.streamedReasoningChunk = ""
 		m.streamedTextChunk = ""
 
 		chatMsg := agent.ChatMessage{
-			Role:    "assistant",
-			Content: m.streamedAgentMessage,
+			Role:         "assistant",
+			Content:      finalContent,
+			InputTokens:  m.streamedInputTokens,
+			OutputTokens: m.streamedOutputTokens,
 		}
 		if len(m.streamedToolCalls) > 0 {
 			chatMsg.FunctionCalls = m.streamedToolCalls
 		}
 		m.conversationHistory = append(m.conversationHistory, chatMsg)
+		m.saveChatMessageToConversation(chatMsg)
+
+		m.inputTokens += m.streamedInputTokens
+		m.outputTokens += m.streamedOutputTokens
 
 		m.streamedAgentMessage = ""
+		m.streamedInputTokens = 0
+		m.streamedOutputTokens = 0
 
 		if len(m.streamedToolCalls) > 0 {
 			return m, tea.Tick(time.Second*1, func(time.Time) tea.Msg {
@@ -432,19 +450,29 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		m.streamedReasoningChunk += chunk
 		return m, waitForReasoning(msg.channel)
 	} else if strings.HasPrefix(msg.chunk, "\x00TEXT:") {
-		// Accumulate text chunks, don't display during streaming
 		chunk := strings.TrimPrefix(msg.chunk, "\x00TEXT:")
 		m.streamedTextChunk += chunk
 		return m, waitForReasoning(msg.channel)
 	} else if strings.HasPrefix(msg.chunk, "\x00CANCELLED:") {
-		// Stream was cancelled - display accumulated content and stop
 		if m.streamedTextChunk != "" {
 			m.addMessage("")
 			m.addMessage(renderMarkdown(m.streamedTextChunk))
 			m.updateViewport()
 		}
 
-		// Message already saved to history in handleGlobalKeyboard
+		finalContent := m.streamedTextChunk
+		if finalContent == "" {
+			finalContent = m.streamedAgentMessage
+		}
+
+		if finalContent != "" {
+			chatMsg := agent.ChatMessage{
+				Role:    "assistant",
+				Content: finalContent + " (cancelled)",
+			}
+			m.saveChatMessageToConversation(chatMsg)
+		}
+
 		m.streamedReasoningChunk = ""
 		m.streamedTextChunk = ""
 		m.streamedAgentMessage = ""
@@ -454,11 +482,10 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		return m, nil
 	}
 
-	// Fallback for unknown chunk types - just continue waiting
 	return m, waitForReasoning(msg.channel)
 }
 
-// handleGlobalKeyboard handles global keyboard shortcuts
+// handleGlobalKeyboard processes global keyboard shortcuts like Ctrl+C and Esc.
 func handleGlobalKeyboard(m *TestUIModel, msg tea.KeyMsg) (*TestUIModel, tea.Cmd, bool) {
 	if msg.Type == tea.KeyCtrlC {
 		return m, tea.Quit, true
@@ -466,14 +493,12 @@ func handleGlobalKeyboard(m *TestUIModel, msg tea.KeyMsg) (*TestUIModel, tea.Cmd
 
 	if msg.Type == tea.KeyEsc {
 		if m.agentState != StateIdle {
-			// Cancel ongoing stream if processing
 			if m.agentState == StateProcessing || m.agentState == StateThinking {
 				if m.cancelStream != nil {
 					close(m.cancelStream)
 					m.cancelStream = nil
 				}
 
-				// Save partial response to history
 				if m.streamedTextChunk != "" || m.streamedAgentMessage != "" {
 					content := m.streamedTextChunk
 					if content == "" {
@@ -485,7 +510,6 @@ func handleGlobalKeyboard(m *TestUIModel, msg tea.KeyMsg) (*TestUIModel, tea.Cmd
 					})
 				}
 
-				// Reset streaming state
 				m.streamedReasoningChunk = ""
 				m.streamedTextChunk = ""
 				m.streamedAgentMessage = ""
@@ -495,9 +519,7 @@ func handleGlobalKeyboard(m *TestUIModel, msg tea.KeyMsg) (*TestUIModel, tea.Cmd
 			m.agentState = StateIdle
 			m.currentToolCall = nil
 			m.pendingToolCall = nil
-			if m.lastMessageRole != "assistant" {
-				m.addMessage(renderAgentLabel())
-			}
+			m.addMessage("")
 			m.addMessage(m.errorStyle.Render("Operation cancelled"))
 			m.addMessage("")
 			m.lastMessageRole = "assistant"
@@ -525,7 +547,7 @@ func handleGlobalKeyboard(m *TestUIModel, msg tea.KeyMsg) (*TestUIModel, tea.Cmd
 	return m, nil, false
 }
 
-// handleSlashCommands handles slash commands
+// handleSlashCommands processes commands starting with "/" like /help, /clear, etc.
 func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd, bool) {
 	if !strings.HasPrefix(userInput, "/") {
 		return m, nil, false
@@ -549,7 +571,6 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		return m, nil, true
 
 	case "/clear":
-		// Show command as user message
 		m.addMessage("")
 		m.addMessage(renderUserLabel() + " " + userInput)
 		m.addMessage("")
@@ -558,19 +579,16 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		m.addMessage(m.successStyle.Render("✓ Conversation cleared"))
 		m.lastMessageRole = "assistant"
 
-		// Clear conversation and recreate header
 		m.conversationHistory = []agent.ChatMessage{}
 		m.recreateHeader()
 		return m, nil, true
 
 	case "/help":
-		// Show command as user message
 		m.addMessage("")
 		m.addMessage(renderUserLabel() + " " + userInput)
 		m.addMessage("")
 		m.lastMessageRole = "user"
 
-		// Show response
 		m.addMessage(m.agentStyle.Render("Available commands:"))
 		for _, cmd := range availableCommands {
 			m.addMessage(lipgloss.NewStyle().Foreground(Theme.Primary).Render(cmd.Name) + " - " + cmd.Description)
@@ -579,7 +597,6 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		return m, nil, true
 
 	case "/logout":
-		// Show command as user message
 		m.addMessage("")
 		m.addMessage(renderUserLabel() + " " + userInput)
 		m.addMessage("")
@@ -595,7 +612,6 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		return m, nil, true
 
 	case "/exit":
-		// Show command as user message
 		m.addMessage("")
 		m.addMessage(renderUserLabel() + " " + userInput)
 		m.addMessage("")
@@ -603,7 +619,6 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		return m, tea.Quit, true
 
 	case "/auth":
-		// Show command as user message
 		m.addMessage("")
 		m.addMessage(renderUserLabel() + " " + userInput)
 		m.addMessage("")
@@ -617,7 +632,6 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		return m, nil, true
 
 	case "/release-notes":
-		// Show command as user message
 		m.addMessage("")
 		m.addMessage(renderUserLabel() + " " + userInput)
 		m.addMessage("")
@@ -630,7 +644,6 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		return m, cmd, true
 
 	case "/info":
-		// Show command as user message
 		m.addMessage("")
 		m.addMessage(renderUserLabel() + " " + userInput)
 		m.addMessage("")
@@ -659,13 +672,12 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 	return m, nil, false
 }
 
-// handleAuthCommand handles auth subcommands
+// handleAuthCommand processes auth subcommands like "auth bearer", "auth apikey", etc.
 func handleAuthCommand(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd, bool) {
 	if !strings.HasPrefix(userInput, "auth ") {
 		return m, nil, false
 	}
 
-	// Show command as user message
 	m.addMessage("")
 	m.addMessage(renderUserLabel() + " " + userInput)
 	m.addMessage("")
@@ -747,7 +759,7 @@ func handleAuthCommand(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd,
 	}
 }
 
-// handleTestPlanState handles StateShowingTestPlan keyboard input
+// handleTestPlanState processes keyboard input when showing the test plan selection UI.
 func handleTestPlanState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyUp:
@@ -766,9 +778,7 @@ func handleTestPlanState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	case tea.KeyEnter:
-		if m.lastMessageRole != "assistant" {
-			m.addMessage(renderAgentLabel())
-		}
+		m.addMessage("")
 
 		var selectedTests []Test
 		for _, test := range m.tests {
@@ -835,7 +845,7 @@ func handleTestPlanState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleConfirmationState handles StateAskingConfirmation keyboard input
+// handleConfirmationState processes keyboard input when asking for tool execution confirmation.
 func handleConfirmationState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyUp:
@@ -862,9 +872,7 @@ func handleConfirmationState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd
 		case 1:
 			m.pendingToolCall = nil
 			m.agentState = StateIdle
-			if m.lastMessageRole != "assistant" {
-				m.addMessage(renderAgentLabel())
-			}
+			m.addMessage("")
 			m.addMessage("Tool execution cancelled")
 			m.addMessage("")
 			m.lastMessageRole = "assistant"
@@ -877,9 +885,7 @@ func handleConfirmationState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd
 				for i, test := range m.tests {
 					if test.Status == "pending" {
 						m.tests[i].Status = "skipped"
-						if m.lastMessageRole != "assistant" {
-							m.addMessage(renderAgentLabel())
-						}
+						m.addMessage("")
 						m.addMessage(m.subtleStyle.Render("Skipped: " + test.Method + " " + test.Endpoint))
 						m.addMessage("")
 						m.lastMessageRole = "assistant"
@@ -903,9 +909,7 @@ func handleConfirmationState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd
 					m.agentState = StateIdle
 				}
 			} else {
-				if m.lastMessageRole != "assistant" {
-					m.addMessage(renderAgentLabel())
-				}
+				m.addMessage("")
 				m.addMessage("Tool execution skipped")
 				m.addMessage("")
 				m.lastMessageRole = "assistant"
@@ -917,7 +921,7 @@ func handleConfirmationState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd
 	return m, nil
 }
 
-// handleCommandsState handles StateShowingCommands keyboard input
+// handleCommandsState processes keyboard input when showing command autocomplete suggestions.
 func handleCommandsState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -953,15 +957,11 @@ func handleCommandsState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		m.showClearHint = false
 
-		lines := strings.Count(m.textarea.Value(), "\n") + 1
+		lines := m.textarea.LineCount()
 		if lines < 1 {
 			lines = 1
-		} else if lines > 6 {
-			lines = 6
 		}
-		if m.textarea.Height() != lines {
-			m.textarea.SetHeight(lines)
-		}
+		m.textarea.SetHeight(lines)
 
 		input := m.textarea.Value()
 		if strings.HasPrefix(input, "/") {
@@ -979,18 +979,14 @@ func handleCommandsState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
-// showToolWidget displays a tool execution widget with title and details
+// showToolWidget displays a tool execution widget with title and details.
+// Deprecated: use m.showToolMessage() instead.
 func showToolWidget(m *TestUIModel, title string, details string) {
-	m.addMessage("")
-	bullet := lipgloss.NewStyle().Foreground(Theme.Primary).Render("➔")
-	m.addMessage(fmt.Sprintf("%s %s", bullet, title))
-	if details != "" {
-		m.addMessage(m.subtleStyle.Render("    " + details))
-	}
+	m.showToolMessage(title, details)
 	m.updateViewport()
 }
 
-// handleProcessToolCalls processes tool calls from the agent
+// handleProcessToolCalls executes tool calls received from the agent.
 func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, tea.Cmd) {
 	if len(m.streamedToolCalls) > 0 {
 		for _, toolCall := range m.streamedToolCalls {
@@ -1000,7 +996,6 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 				m.currentTestToolName = "get_endpoints_details"
 				m.agentState = StateThinking
 
-				// Show which endpoints are being fetched
 				if endpointsArg, ok := toolCall.Arguments["endpoints"].([]any); ok {
 					var endpointsList []string
 					for _, ep := range endpointsArg {
@@ -1071,7 +1066,6 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 				m.currentTestToolID = toolCall.ID
 				m.currentTestToolName = "ExecuteTestGroup"
 
-				showToolWidget(m, "Executing tests", "")
 				m.agentState = StateProcessing
 				return m, m.executeTool(toolCall)
 			}
@@ -1099,7 +1093,7 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 	return m, nil
 }
 
-// handleShowTestSelection displays test selection UI
+// handleShowTestSelection displays the test selection UI with generated test cases.
 func handleShowTestSelection(m *TestUIModel, msg showTestSelectionMsg) (tea.Model, tea.Cmd) {
 	m.tests = make([]Test, 0, len(msg.tests))
 	for i, testMap := range msg.tests {

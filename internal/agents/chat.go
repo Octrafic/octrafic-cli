@@ -11,6 +11,8 @@ type ChatMessage struct {
 	ReasoningContent string                `json:"reasoning_content,omitempty"`
 	FunctionCalls    []ToolCall            `json:"function_calls,omitempty"`
 	FunctionResponse *FunctionResponseData `json:"function_response,omitempty"`
+	InputTokens      int64                 `json:"input_tokens,omitempty"`
+	OutputTokens     int64                 `json:"output_tokens,omitempty"`
 }
 
 type FunctionResponseData struct {
