@@ -16,6 +16,11 @@ iex (iwr -useb https://octrafic.com/install.ps1)
 
 ## Package Managers
 
+### Windows - Winget
+```powershell
+winget install Octrafic.octrafic
+```
+
 ### macOS - Homebrew
 ```bash
 brew install octrafic/tap/octrafic
@@ -81,6 +86,11 @@ octrafic --help
 ---
 
 ## Uninstall
+
+### Winget
+```powershell
+winget uninstall Octrafic.octrafic
+```
 
 ### Homebrew
 ```bash
