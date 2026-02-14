@@ -5,8 +5,8 @@ import (
 	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
 	"strings"
 
+	"github.com/Octrafic/octrafic-cli/internal/ui/textarea"
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -60,17 +60,16 @@ type ChatModel struct {
 
 // NewChatModel creates a new chat-based interactive model
 func NewChatModel(baseURL string, analysis *analyzer.Analysis) *ChatModel {
-	// Initialize textarea
 	ta := textarea.New()
 	ta.Placeholder = "Type your message..."
 	ta.Focus()
 	ta.Prompt = "┃ "
 	ta.CharLimit = 500
 	ta.SetWidth(50)
-	ta.SetHeight(3)
-	ta.FocusedStyle.CursorLine = lipgloss.NewStyle() // Remove cursor line
 	ta.ShowLineNumbers = false
-	ta.KeyMap.InsertNewline.SetEnabled(false) // Disable Enter for newlines
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
+	ta.MaxVisualHeight = 10
+	ta.KeyMap.InsertNewline.SetEnabled(false)
 
 	// Initialize viewport with mouse wheel support
 	vp := viewport.New(50, 10)

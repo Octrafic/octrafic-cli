@@ -30,9 +30,9 @@ jobs:
           config.ai_timeout: "120"
           
           github_action_config.auto_review: "true"
-          github_action_config.auto_describe: "true"
+          github_action_config.auto_describe: "false"
           github_action_config.auto_improve: "false"
-          
+
           pr_reviewer.extra_instructions: |
             Focus on:
             - Go idioms and error handling patterns
@@ -43,9 +43,9 @@ jobs:
           pr_reviewer.num_code_suggestions: "4"
           pr_reviewer.inline_code_comments: "true"
           pr_reviewer.persistent_comment: "true"
-          
+
           pr_description.use_bullet_points: "true"
-          pr_description.publish_description_as_comment: "false"
+          pr_description.publish_description_as_comment: "true"
           
           pr_code_suggestions.commitable_code_suggestions: "true"
           pr_code_suggestions.num_code_suggestions: "4"
