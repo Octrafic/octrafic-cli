@@ -51,7 +51,7 @@ var (
 	debugFilePath string
 
 	forceOnboarding bool
-	
+
 	resumeConversationID string
 )
 
@@ -546,13 +546,7 @@ func handleFullscreenSelector() {
 		}
 
 		if result.ShouldCreateNewProject() {
-			// Try to create new project
-			created := promptNewProjectInteractive()
-			if !created {
-				// User cancelled, loop back to selector
-				continue
-			}
-			// If created successfully, reload and continue
+			promptNewProjectInteractive()
 			continue
 		}
 
