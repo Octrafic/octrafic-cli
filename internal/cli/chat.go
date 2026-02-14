@@ -5,8 +5,8 @@ import (
 	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
 	"strings"
 
+	"github.com/Octrafic/octrafic-cli/internal/ui/textarea"
 	"github.com/charmbracelet/bubbles/key"
-		"github.com/Octrafic/octrafic-cli/internal/ui/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
