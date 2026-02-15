@@ -492,7 +492,7 @@ func (m TestUIModel) View() string {
 				bottomParts = append(bottomParts, tokensDisplay)
 			}
 			if m.latestVersion != "" {
-				updateDisplay := lipgloss.NewStyle().Foreground(Theme.Warning).Render("⬆ v" + m.latestVersion + " available")
+				updateDisplay := lipgloss.NewStyle().Foreground(Theme.Warning).Render(fmt.Sprintf("⬆ v%s available • Run: octrafic --update", m.latestVersion))
 				bottomParts = append(bottomParts, updateDisplay)
 			}
 		}
