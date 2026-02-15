@@ -38,7 +38,7 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.viewport.Width = msg.Width - 4
 		m.viewport.Height = msg.Height - 7
-		m.textarea.SetWidth(msg.Width - 8)
+		m.textarea.SetWidth(msg.Width - 4)
 		m.updateViewport()
 
 	case streamReasoningMsg:

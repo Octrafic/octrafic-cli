@@ -17,7 +17,6 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/reflow/wordwrap"
 )
 
 type AgentState int
@@ -473,6 +472,7 @@ func (m TestUIModel) View() string {
 		}
 
 		var bottomParts []string
+		var updateNotification string
 
 		if m.agentState == StateIdle && m.showClearHint {
 			bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Warning).Render("Press ESC again to clear"))
@@ -492,17 +492,31 @@ func (m TestUIModel) View() string {
 				bottomParts = append(bottomParts, tokensDisplay)
 			}
 			if m.latestVersion != "" {
-				updateDisplay := lipgloss.NewStyle().Foreground(Theme.Warning).Render("⬆ v" + m.latestVersion + " available")
-				bottomParts = append(bottomParts, updateDisplay)
+				updateNotification = lipgloss.NewStyle().Foreground(Theme.Warning).Render(fmt.Sprintf("v%s available • Run: octrafic --update", m.latestVersion))
 			}
 		}
 
-		if len(bottomParts) > 0 {
-			bottomText := strings.Join(bottomParts, " • ")
-			if m.width > 0 {
-				bottomText = wordwrap.String(bottomText, m.width-4)
+		if len(bottomParts) > 0 || updateNotification != "" {
+			contentWidth := m.width - 2
+			halfWidth := contentWidth / 2
+			if halfWidth < 20 {
+				halfWidth = 20
 			}
-			s.WriteString(" " + m.helpStyle.Render(bottomText) + "\n")
+
+			leftText := ""
+			if len(bottomParts) > 0 {
+				leftText = strings.Join(bottomParts, " • ")
+			}
+
+			leftStyle := lipgloss.NewStyle().Width(halfWidth).Align(lipgloss.Left)
+			leftRendered := leftStyle.Render(m.helpStyle.Render(leftText))
+
+			rightStyle := lipgloss.NewStyle().Width(halfWidth).Align(lipgloss.Right)
+			rightRendered := rightStyle.Render(m.helpStyle.Render(updateNotification))
+
+			bottomContent := lipgloss.JoinHorizontal(lipgloss.Top, leftRendered, rightRendered)
+			bottomLine := lipgloss.NewStyle().Padding(0, 1).Render(bottomContent)
+			s.WriteString(bottomLine + "\n")
 		}
 
 		if m.agentState != StateIdle {
@@ -510,7 +524,7 @@ func (m TestUIModel) View() string {
 			animStyle := lipgloss.NewStyle().Foreground(Theme.Primary)
 			escKey := lipgloss.NewStyle().Foreground(Theme.White).Bold(true).Render("ESC")
 			escHint := lipgloss.NewStyle().Foreground(Theme.TextSubtle).Render(" to cancel")
-			s.WriteString(" " + animStyle.Render(anim) + "   " + escKey + escHint + "\n")
+			s.WriteString(" " + animStyle.Render(anim) + " " + escKey + escHint + "\n")
 		}
 	}
 

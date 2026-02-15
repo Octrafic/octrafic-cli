@@ -399,7 +399,7 @@ func (m ResumeSelectorModel) viewProjectSelection() string {
 }
 
 func (m ResumeSelectorModel) renderNewProjectCard(selected bool) string {
-	textColor := Theme.Text
+	textColor := Theme.TextMuted
 
 	if selected {
 		textColor = Theme.PrimaryStrong
@@ -428,10 +428,12 @@ func (m ResumeSelectorModel) renderNewProjectCard(selected bool) string {
 }
 
 func (m ResumeSelectorModel) renderProjectCard(project *storage.Project, selected bool) string {
-	nameColor := Theme.Text
+	nameColor := Theme.TextMuted
+	urlColor := Theme.TextMuted
 
 	if selected {
 		nameColor = Theme.PrimaryStrong
+		urlColor = Theme.Cyan
 	}
 
 	// Project name - truncate if needed
@@ -463,7 +465,7 @@ func (m ResumeSelectorModel) renderProjectCard(project *storage.Project, selecte
 	url = strings.TrimPrefix(url, "https://")
 	url = strings.TrimPrefix(url, "http://")
 	url = truncateMiddle(url, cardWidth-4)
-	urlStyle := lipgloss.NewStyle().Foreground(Theme.Cyan)
+	urlStyle := lipgloss.NewStyle().Foreground(urlColor)
 	if selected {
 		urlStyle = urlStyle.Background(Theme.BgSelected)
 	}
@@ -550,7 +552,7 @@ func (m ResumeSelectorModel) viewConversationSelection() string {
 }
 
 func (m ResumeSelectorModel) renderNewConversationCard(selected bool) string {
-	textColor := Theme.Text
+	textColor := Theme.TextMuted
 
 	if selected {
 		textColor = Theme.PrimaryStrong
@@ -579,7 +581,7 @@ func (m ResumeSelectorModel) renderNewConversationCard(selected bool) string {
 }
 
 func (m ResumeSelectorModel) renderConversationCard(conv *storage.Conversation, selected bool) string {
-	titleColor := Theme.Text
+	titleColor := Theme.TextMuted
 
 	if selected {
 		titleColor = Theme.PrimaryStrong
