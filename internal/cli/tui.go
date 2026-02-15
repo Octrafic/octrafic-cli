@@ -473,6 +473,7 @@ func (m TestUIModel) View() string {
 		}
 
 		var bottomParts []string
+		var updateNotification string
 
 		if m.agentState == StateIdle && m.showClearHint {
 			bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Warning).Render("Press ESC again to clear"))
@@ -492,17 +493,32 @@ func (m TestUIModel) View() string {
 				bottomParts = append(bottomParts, tokensDisplay)
 			}
 			if m.latestVersion != "" {
-				updateDisplay := lipgloss.NewStyle().Foreground(Theme.Warning).Render(fmt.Sprintf("v%s available • Run: octrafic --update", m.latestVersion))
-				bottomParts = append(bottomParts, updateDisplay)
+				updateNotification = lipgloss.NewStyle().Foreground(Theme.Warning).Render(fmt.Sprintf("v%s available • Run: octrafic --update", m.latestVersion))
 			}
 		}
 
-		if len(bottomParts) > 0 {
-			bottomText := strings.Join(bottomParts, " • ")
-			if m.width > 0 {
-				bottomText = wordwrap.String(bottomText, m.width-4)
+		if len(bottomParts) > 0 || updateNotification != "" {
+			leftText := ""
+			if len(bottomParts) > 0 {
+				leftText = strings.Join(bottomParts, " • ")
 			}
-			s.WriteString(" " + m.helpStyle.Render(bottomText) + "\n")
+
+			if leftText != "" && updateNotification != "" {
+				spacerWidth := m.width - lipgloss.Width(leftText) - lipgloss.Width(updateNotification) - 4
+				if spacerWidth < 1 {
+					spacerWidth = 1
+				}
+				bottomLine := " " + m.helpStyle.Render(leftText) + strings.Repeat(" ", spacerWidth) + m.helpStyle.Render(updateNotification) + "\n"
+				s.WriteString(bottomLine)
+			} else if leftText != "" {
+				s.WriteString(" " + m.helpStyle.Render(leftText) + "\n")
+			} else if updateNotification != "" {
+				spacerWidth := m.width - lipgloss.Width(updateNotification) - 4
+				if spacerWidth < 1 {
+					spacerWidth = 1
+				}
+				s.WriteString(strings.Repeat(" ", spacerWidth) + m.helpStyle.Render(updateNotification) + "\n")
+			}
 		}
 
 		if m.agentState != StateIdle {
