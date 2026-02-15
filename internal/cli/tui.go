@@ -491,6 +491,10 @@ func (m TestUIModel) View() string {
 				tokensDisplay := lipgloss.NewStyle().Foreground(Theme.TextMuted).Render(fmt.Sprintf("↑%d ↓%d", m.inputTokens, m.outputTokens))
 				bottomParts = append(bottomParts, tokensDisplay)
 			}
+			if m.latestVersion != "" {
+				updateDisplay := lipgloss.NewStyle().Foreground(Theme.Warning).Render("⬆ v" + m.latestVersion + " available")
+				bottomParts = append(bottomParts, updateDisplay)
+			}
 		}
 
 		if len(bottomParts) > 0 {
