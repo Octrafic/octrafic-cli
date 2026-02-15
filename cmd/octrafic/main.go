@@ -51,6 +51,7 @@ var (
 	debugFilePath string
 
 	forceOnboarding bool
+	updateFlag      bool
 
 	resumeConversationID string
 )
@@ -68,6 +69,17 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 			printCustomHelp(cmd)
 			os.Exit(1)
 		}
+
+		// Handle --update flag
+		if updateFlag {
+			if err := updater.PerformUpdate(version); err != nil {
+				fmt.Printf("Update failed: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Println("\n✓ Update complete!")
+			return
+		}
+
 		if forceOnboarding {
 			completed := runOnboarding()
 			if !completed {
@@ -239,6 +251,7 @@ func printCustomHelp(cmd *cobra.Command) {
 	fmt.Printf("\nAdvanced:\n")
 	printFlag(cmd, "debug-file", "", "Path to debug log file (enables detailed logging)")
 	printFlag(cmd, "onboarding", "", "Force run onboarding wizard")
+	printFlag(cmd, "update", "", "Update octrafic to the latest version")
 
 	fmt.Printf("\nOther:\n")
 	printFlag(cmd, "help", "h", "Show this help message")
@@ -320,6 +333,7 @@ func init() {
 
 	rootCmd.Flags().StringVar(&debugFilePath, "debug-file", "", "Path to debug log file (enables detailed logging)")
 	rootCmd.Flags().BoolVar(&forceOnboarding, "onboarding", false, "Force run onboarding wizard")
+	rootCmd.Flags().BoolVar(&updateFlag, "update", false, "Update octrafic to the latest version")
 
 	rootCmd.Flags().StringVarP(&resumeConversationID, "resume", "r", "", "Resume a specific conversation by UUID")
 
