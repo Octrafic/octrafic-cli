@@ -3,10 +3,14 @@ package parser
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -38,12 +42,26 @@ type Parameter struct {
 }
 
 func ParseSpecification(path string) (*Specification, error) {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
+	var content []byte
+	var err error
+	var isURL bool
+
+	if isURL = isHTTPURL(path); isURL {
+		content, err = fetchFromURL(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch spec from URL: %w", err)
+		}
+	} else {
+		content, err = os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file: %w", err)
+		}
 	}
 
 	ext := strings.ToLower(filepath.Ext(path))
+	if isURL && ext == "" {
+		ext = detectFormatFromContent(content)
+	}
 
 	if ext == ".json" {
 		var data map[string]any
@@ -447,4 +465,45 @@ func parseGraphQLField(field string, queryType string) *Endpoint {
 	}
 
 	return endpoint
+}
+
+func isHTTPURL(path string) bool {
+	parsed, err := url.Parse(path)
+	if err != nil {
+		return false
+	}
+	return parsed.Scheme == "http" || parsed.Scheme == "https"
+}
+
+func fetchFromURL(specURL string) ([]byte, error) {
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	resp, err := client.Get(specURL)
+	if err != nil {
+		return nil, fmt.Errorf("network error: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
+	}
+
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return content, nil
+}
+
+func detectFormatFromContent(content []byte) string {
+	trimmed := strings.TrimSpace(string(content))
+	if strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") {
+		return ".json"
+	}
+	return ".yaml"
 }

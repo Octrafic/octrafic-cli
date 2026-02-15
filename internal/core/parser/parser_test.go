@@ -458,3 +458,47 @@ func TestParseGraphQLField(t *testing.T) {
 		t.Error("expected nil for field with no name")
 	}
 }
+
+func TestIsHTTPURL(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"https://api.example.com/openapi.json", true},
+		{"http://localhost:8080/swagger.json", true},
+		{"HTTPS://api.example.com/spec", true},
+		{"/local/path/to/file.json", false},
+		{"./relative/path.yaml", false},
+		{"file.json", false},
+		{"", false},
+		{"ftp://files.example.com/spec.json", false},
+	}
+
+	for _, tt := range tests {
+		got := isHTTPURL(tt.input)
+		if got != tt.expected {
+			t.Errorf("isHTTPURL(%q) = %v, want %v", tt.input, got, tt.expected)
+		}
+	}
+}
+
+func TestDetectFormatFromContent(t *testing.T) {
+	tests := []struct {
+		content  string
+		expected string
+	}{
+		{`{"openapi": "3.0.0"}`, ".json"},
+		{`  {"data": "value"}`, ".json"},
+		{`[{"id": 1}]`, ".json"},
+		{"openapi: 3.0.0\npaths: {}", ".yaml"},
+		{"  openapi: 3.0.0", ".yaml"},
+		{"plain text content", ".yaml"},
+	}
+
+	for _, tt := range tests {
+		got := detectFormatFromContent([]byte(tt.content))
+		if got != tt.expected {
+			t.Errorf("detectFormatFromContent(%q) = %q, want %q", tt.content, got, tt.expected)
+		}
+	}
+}
