@@ -27,15 +27,15 @@ const (
 type InstallMethod string
 
 const (
-	MethodHomebrew     InstallMethod = "homebrew"
-	MethodYay          InstallMethod = "yay"
-	MethodParu         InstallMethod = "paru"
-	MethodWinget       InstallMethod = "winget"
-	MethodDeb          InstallMethod = "deb"
-	MethodRPM          InstallMethod = "rpm"
-	MethodScript       InstallMethod = "script"
-	MethodManual       InstallMethod = "manual"
-	MethodUnknown      InstallMethod = "unknown"
+	MethodHomebrew InstallMethod = "homebrew"
+	MethodYay      InstallMethod = "yay"
+	MethodParu     InstallMethod = "paru"
+	MethodWinget   InstallMethod = "winget"
+	MethodDeb      InstallMethod = "deb"
+	MethodRPM      InstallMethod = "rpm"
+	MethodScript   InstallMethod = "script"
+	MethodManual   InstallMethod = "manual"
+	MethodUnknown  InstallMethod = "unknown"
 )
 
 // UpdateInfo holds information about available updates
@@ -322,7 +322,7 @@ func updateBinary(version string) error {
 	if err != nil {
 		return fmt.Errorf("failed to download release: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to download release: HTTP %d", resp.StatusCode)
@@ -332,20 +332,22 @@ func updateBinary(version string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	_, err = io.Copy(tmpFile, resp.Body)
 	if err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		return fmt.Errorf("failed to download: %w", err)
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temp file: %w", err)
+	}
 
 	binaryPath, err := extractBinary(tmpFile.Name(), archiveName)
 	if err != nil {
 		return fmt.Errorf("failed to extract binary: %w", err)
 	}
-	defer os.Remove(binaryPath)
+	defer func() { _ = os.Remove(binaryPath) }()
 
 	fmt.Printf("Installing to %s...\n", execPath)
 
@@ -355,16 +357,16 @@ func updateBinary(version string) error {
 	}
 
 	if err := copyFile(binaryPath, execPath); err != nil {
-		os.Rename(backupPath, execPath)
+		_ = os.Rename(backupPath, execPath)
 		return fmt.Errorf("failed to install new binary: %w", err)
 	}
 
 	if err := os.Chmod(execPath, 0755); err != nil {
-		os.Rename(backupPath, execPath)
+		_ = os.Rename(backupPath, execPath)
 		return fmt.Errorf("failed to set permissions: %w", err)
 	}
 
-	os.Remove(backupPath)
+	_ = os.Remove(backupPath)
 
 	return nil
 }
@@ -411,7 +413,7 @@ func extractZip(archivePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	for _, f := range r.File {
 		if f.Name == "octrafic.exe" || f.Name == "octrafic" {
@@ -419,17 +421,17 @@ func extractZip(archivePath string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			defer rc.Close()
+			defer func() { _ = rc.Close() }()
 
 			tmpBinary, err := os.CreateTemp("", "octrafic-binary-*")
 			if err != nil {
 				return "", err
 			}
-			defer tmpBinary.Close()
+			defer func() { _ = tmpBinary.Close() }()
 
 			_, err = io.Copy(tmpBinary, rc)
 			if err != nil {
-				os.Remove(tmpBinary.Name())
+				_ = os.Remove(tmpBinary.Name())
 				return "", err
 			}
 
@@ -445,13 +447,13 @@ func extractTarGz(archivePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	gzr, err := gzip.NewReader(f)
 	if err != nil {
 		return "", err
 	}
-	defer gzr.Close()
+	defer func() { _ = gzr.Close() }()
 
 	tr := tar.NewReader(gzr)
 
@@ -469,11 +471,11 @@ func extractTarGz(archivePath string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			defer tmpBinary.Close()
+			defer func() { _ = tmpBinary.Close() }()
 
 			_, err = io.Copy(tmpBinary, tr)
 			if err != nil {
-				os.Remove(tmpBinary.Name())
+				_ = os.Remove(tmpBinary.Name())
 				return "", err
 			}
 
@@ -489,13 +491,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer source.Close()
+	defer func() { _ = source.Close() }()
 
 	destination, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer destination.Close()
+	defer func() { _ = destination.Close() }()
 
 	_, err = io.Copy(destination, source)
 	return err
