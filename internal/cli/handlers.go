@@ -74,7 +74,7 @@ func (m *TestUIModel) sendChatMessage(_ string) tea.Cmd {
 			resultChan := make(chan chatResult, 1)
 
 			go func() {
-				resp, err := m.localAgent.ChatStream(m.conversationHistory, m.thinkingEnabled,
+				resp, err := m.localAgent.ChatStream(m.conversationHistory, true,
 					func(chunk string, isThought bool) {
 						select {
 						case <-cancelChan:

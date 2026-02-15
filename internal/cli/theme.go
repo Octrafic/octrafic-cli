@@ -149,3 +149,31 @@ var Theme = struct {
 		"#A78BFA", // Violet 400
 	},
 }
+
+var ProcessingAnimationFrames = []string{
+	"● ○ ○ ○ ○ ○",
+	"● ● ○ ○ ○ ○",
+	"● ● ● ○ ○ ○",
+	"● ● ● ● ○ ○",
+	"● ● ● ● ● ○",
+	"● ● ● ● ● ●",
+	"○ ● ● ● ● ●",
+	"○ ○ ● ● ● ●",
+	"○ ○ ○ ● ● ●",
+	"○ ○ ○ ○ ● ●",
+	"○ ○ ○ ○ ○ ●",
+	"○ ○ ○ ○ ● ●",
+	"○ ○ ○ ● ● ●",
+	"○ ○ ● ● ● ●",
+	"○ ● ● ● ● ●",
+	"● ● ● ● ● ●",
+	"● ● ● ● ● ○",
+	"● ● ● ● ○ ○",
+	"● ● ● ○ ○ ○",
+	"● ● ○ ○ ○ ○",
+	"● ○ ○ ○ ○ ○",
+}
+
+func RenderProcessingAnimation(frame int) string {
+	return ProcessingAnimationFrames[frame%len(ProcessingAnimationFrames)]
+}

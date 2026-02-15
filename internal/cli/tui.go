@@ -47,7 +47,6 @@ type Command struct {
 }
 
 var availableCommands = []Command{
-	{Name: "/think", Description: "Toggle thinking mode (Ctrl+T)"},
 	{Name: "/clear", Description: "Clear the conversation history"},
 	{Name: "/help", Description: "Show help and available commands"},
 	{Name: "/logout", Description: "Logout and clear session"},
@@ -127,7 +126,6 @@ type TestUIModel struct {
 	// Agent state
 	agentState               AgentState
 	executionMode            ExecutionMode
-	thinkingEnabled          bool   // Whether to use /think tag for reasoning
 	lastMessageRole          string // Track who sent the last message ("user" or "assistant")
 	conversationHistory      []agent.ChatMessage
 	conversationID           string // Current conversation UUID
@@ -175,6 +173,8 @@ type TestUIModel struct {
 	inputTokens  int64
 	outputTokens int64
 
+	modelName string
+
 	// Tests
 	tests                   []Test
 	selectedTestIndex       int
@@ -216,7 +216,7 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 	ta.Prompt = ""  // Remove prompt line
 	// Remove cursor line highlighting
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
-	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(Theme.TextSubtle).Italic(true)
+	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(Theme.TextSubtle)
 	// Keep default Enter behavior for newlines (textarea handles it)
 	// Ctrl+Enter will be used to send messages (handled in Update)
 
@@ -248,8 +248,7 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 		authProvider:        authProvider,
 		agentState:          StateIdle,
 		executionMode:       ModeAsk,
-		thinkingEnabled:     true, // Thinking enabled by default
-		lastMessageRole:     "",   // Empty = no messages yet, so first message will show label
+		lastMessageRole:     "", // Empty = no messages yet, so first message will show label
 		conversationHistory: []agent.ChatMessage{},
 		viewport:            vp,
 		messages:            []string{},
@@ -273,8 +272,13 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 	}
 
 	model.currentVersion = version
-	if cfg, err := config.Load(); err == nil && cfg.LatestVersion != "" && updater.IsNewer(cfg.LatestVersion, version) {
-		model.latestVersion = cfg.LatestVersion
+	if cfg, err := config.Load(); err == nil {
+		if cfg.LatestVersion != "" && updater.IsNewer(cfg.LatestVersion, version) {
+			model.latestVersion = cfg.LatestVersion
+		}
+		if cfg.Model != "" {
+			model.modelName = cfg.Model
+		}
 	}
 
 	// Add header (logo + info)
@@ -424,43 +428,13 @@ func (m TestUIModel) View() string {
 		s.WriteString("\n")
 		s.WriteString(m.helpStyle.Render("↑/↓ to select • Enter to confirm • ESC to cancel") + "\n")
 	} else {
-		// Add empty line before status bar
 		s.WriteString("\n")
 
-		// Status bar - always shown
-		var icon string
-		var statusMsg string
-		if m.agentState == StateThinking || m.agentState == StateProcessing || m.agentState == StateRunningTests || m.agentState == StateUsingTool {
-			icon = m.spinner.View()
-			statusMsg = generateGradientText("Working...", m.animationFrame)
-		} else if m.textarea.Value() == "" {
-			icon = "○"
-			statusMsg = "Write a message"
-		} else {
-			icon = "●"
-			statusMsg = "Press enter to send"
-		}
-
-		// Token display
-		tokensStyle := lipgloss.NewStyle().Foreground(Theme.TextMuted)
-		tokenDisplay := tokensStyle.Render(fmt.Sprintf(" • ↑%d ↓%d", m.inputTokens, m.outputTokens))
-
-		// Update indicator
-		updateDisplay := ""
-		if m.latestVersion != "" {
-			updateDisplay = lipgloss.NewStyle().Foreground(Theme.Warning).Render(fmt.Sprintf(" • v%s available", m.latestVersion))
-		}
-
-		s.WriteString(icon + " " + statusMsg + tokenDisplay + updateDisplay + "\n")
-
-		// Input AFTER status line (with border)
 		s.WriteString(m.borderStyle.Render(m.textarea.View()) + "\n")
 
-		// Command suggestions (if showing)
 		if m.agentState == StateShowingCommands && len(m.filteredCommands) > 0 {
 			s.WriteString("\n")
 
-			// Styles for command list
 			selectedStyle := lipgloss.NewStyle().
 				Foreground(Theme.Primary).
 				Background(Theme.BgDark).
@@ -472,11 +446,9 @@ func (m TestUIModel) View() string {
 
 			for i, cmd := range m.filteredCommands {
 				if i == m.selectedCommandIndex {
-					// Selected command
 					s.WriteString(selectedStyle.Render("> "+cmd.Name) + " ")
 					s.WriteString(descStyle.Render(cmd.Description) + "\n")
 				} else {
-					// Normal command
 					s.WriteString(normalStyle.Render("  "+cmd.Name) + " ")
 					s.WriteString(descStyle.Render(cmd.Description) + "\n")
 				}
@@ -487,23 +459,41 @@ func (m TestUIModel) View() string {
 				Render("↑/↓ navigate • Enter select • ESC cancel") + "\n")
 		}
 
-		// Help text BELOW input (only when idle)
-		if m.agentState == StateIdle {
-			helpText := ""
-			// Show ESC clear hint if active
-			if m.showClearHint {
-				helpText = lipgloss.NewStyle().Foreground(Theme.Warning).Render("Press ESC again to clear input")
-			} else {
-				if m.thinkingEnabled {
-					helpText += lipgloss.NewStyle().Foreground(Theme.Violet).Render("Think") + " • "
+		var bottomParts []string
+
+		if m.agentState == StateIdle && m.showClearHint {
+			bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Warning).Render("Press ESC again to clear"))
+		} else {
+			octraficDisplay := lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true).Render("Octrafic") + " " + lipgloss.NewStyle().Foreground(Theme.TextMuted).Render("v"+m.currentVersion)
+			bottomParts = append(bottomParts, octraficDisplay)
+			if m.modelName != "" {
+				modelName := m.modelName
+				if idx := strings.Index(modelName, "/"); idx != -1 {
+					modelName = modelName[idx+1:]
 				}
-				helpText += "Ctrl+T thinking • Ctrl+C to quit"
+				modelDisplay := lipgloss.NewStyle().Foreground(Theme.Text).Render(modelName)
+				bottomParts = append(bottomParts, modelDisplay)
 			}
-			// Wrap help text if too long
+			if m.inputTokens > 0 || m.outputTokens > 0 {
+				tokensDisplay := lipgloss.NewStyle().Foreground(Theme.TextMuted).Render(fmt.Sprintf("↑%d ↓%d", m.inputTokens, m.outputTokens))
+				bottomParts = append(bottomParts, tokensDisplay)
+			}
+		}
+
+		if len(bottomParts) > 0 {
+			bottomText := strings.Join(bottomParts, " • ")
 			if m.width > 0 {
-				helpText = wordwrap.String(helpText, m.width-4)
+				bottomText = wordwrap.String(bottomText, m.width-4)
 			}
-			s.WriteString(m.helpStyle.Render(helpText) + "\n")
+			s.WriteString(" " + m.helpStyle.Render(bottomText) + "\n")
+		}
+
+		if m.agentState != StateIdle {
+			anim := RenderProcessingAnimation(m.animationFrame)
+			animStyle := lipgloss.NewStyle().Foreground(Theme.Primary)
+			escKey := lipgloss.NewStyle().Foreground(Theme.White).Bold(true).Render("ESC")
+			escHint := lipgloss.NewStyle().Foreground(Theme.TextSubtle).Render(" to cancel")
+			s.WriteString(" " + animStyle.Render(anim) + "   " + escKey + escHint + "\n")
 		}
 	}
 
