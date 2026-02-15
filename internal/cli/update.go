@@ -161,9 +161,6 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.agentState == StateIdle {
 			switch msg.Type {
-			case tea.KeyCtrlT:
-				m.thinkingEnabled = !m.thinkingEnabled
-				return m, nil
 			case tea.KeyEnter:
 				userInput := m.textarea.Value()
 				if strings.HasSuffix(userInput, "\\") {
@@ -183,7 +180,7 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 					return m, nil
 				}
-				if userInput != "" {
+				if strings.TrimSpace(userInput) != "" {
 					m.commandHistory = append(m.commandHistory, userInput)
 					m.historyIndex = -1
 					m.temporaryInput = ""
@@ -561,22 +558,6 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 	}
 
 	switch userInput {
-	case "/think":
-		// Show command as user message
-		m.addMessage("")
-		m.addMessage(renderUserLabel() + " " + userInput)
-		m.addMessage("")
-		m.lastMessageRole = "user"
-
-		m.thinkingEnabled = !m.thinkingEnabled
-		status := "disabled"
-		if m.thinkingEnabled {
-			status = "enabled"
-		}
-		m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ Thinking mode %s", status)))
-		m.lastMessageRole = "assistant"
-		return m, nil, true
-
 	case "/clear":
 		m.addMessage("")
 		m.addMessage(renderUserLabel() + " " + userInput)
