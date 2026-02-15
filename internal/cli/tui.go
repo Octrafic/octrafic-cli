@@ -497,27 +497,26 @@ func (m TestUIModel) View() string {
 		}
 
 		if len(bottomParts) > 0 || updateNotification != "" {
+			contentWidth := m.width - 2
+			halfWidth := contentWidth / 2
+			if halfWidth < 20 {
+				halfWidth = 20
+			}
+
 			leftText := ""
 			if len(bottomParts) > 0 {
 				leftText = strings.Join(bottomParts, " • ")
 			}
 
-			if leftText != "" && updateNotification != "" {
-				spacerWidth := m.width - lipgloss.Width(leftText) - lipgloss.Width(updateNotification) - 4
-				if spacerWidth < 1 {
-					spacerWidth = 1
-				}
-				bottomLine := " " + m.helpStyle.Render(leftText) + strings.Repeat(" ", spacerWidth) + m.helpStyle.Render(updateNotification) + "\n"
-				s.WriteString(bottomLine)
-			} else if leftText != "" {
-				s.WriteString(" " + m.helpStyle.Render(leftText) + "\n")
-			} else if updateNotification != "" {
-				spacerWidth := m.width - lipgloss.Width(updateNotification) - 4
-				if spacerWidth < 1 {
-					spacerWidth = 1
-				}
-				s.WriteString(strings.Repeat(" ", spacerWidth) + m.helpStyle.Render(updateNotification) + "\n")
-			}
+			leftStyle := lipgloss.NewStyle().Width(halfWidth).Align(lipgloss.Left)
+			leftRendered := leftStyle.Render(m.helpStyle.Render(leftText))
+
+			rightStyle := lipgloss.NewStyle().Width(halfWidth).Align(lipgloss.Right)
+			rightRendered := rightStyle.Render(m.helpStyle.Render(updateNotification))
+
+			bottomContent := lipgloss.JoinHorizontal(lipgloss.Top, leftRendered, rightRendered)
+			bottomLine := lipgloss.NewStyle().Padding(0, 1).Render(bottomContent)
+			s.WriteString(bottomLine + "\n")
 		}
 
 		if m.agentState != StateIdle {
@@ -525,7 +524,7 @@ func (m TestUIModel) View() string {
 			animStyle := lipgloss.NewStyle().Foreground(Theme.Primary)
 			escKey := lipgloss.NewStyle().Foreground(Theme.White).Bold(true).Render("ESC")
 			escHint := lipgloss.NewStyle().Foreground(Theme.TextSubtle).Render(" to cancel")
-			s.WriteString(" " + animStyle.Render(anim) + "   " + escKey + escHint + "\n")
+			s.WriteString(" " + animStyle.Render(anim) + " " + escKey + escHint + "\n")
 		}
 	}
 
