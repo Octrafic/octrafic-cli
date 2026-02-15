@@ -99,7 +99,7 @@ func (m ProjectWithConversationsModel) View() string {
 
 	// Projects list
 	for i, project := range m.projects {
-		style := lipgloss.NewStyle().Foreground(Theme.Text)
+		style := lipgloss.NewStyle().Foreground(Theme.TextMuted)
 		prefix := "  "
 		if i == m.cursor {
 			style = lipgloss.NewStyle().
@@ -156,7 +156,7 @@ func (m ProjectWithConversationsModel) View() string {
 				title = title[:47] + "..."
 			}
 			line := fmt.Sprintf("  • %s %s", title, lipgloss.NewStyle().Foreground(Theme.TextSubtle).Render("("+timeAgo+")"))
-			s.WriteString(lipgloss.NewStyle().Foreground(Theme.Text).Render(line))
+			s.WriteString(lipgloss.NewStyle().Foreground(Theme.TextMuted).Render(line))
 			s.WriteString("\n")
 		}
 

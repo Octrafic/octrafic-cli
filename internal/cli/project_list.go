@@ -20,7 +20,7 @@ var (
 
 	itemStyle = lipgloss.NewStyle().
 			PaddingLeft(2).
-			Foreground(Theme.Text)
+			Foreground(Theme.TextMuted)
 
 	selectedItemStyle = lipgloss.NewStyle().
 				PaddingLeft(2).
