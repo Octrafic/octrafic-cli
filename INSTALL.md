@@ -14,6 +14,22 @@ iex (iwr -useb https://octrafic.com/install.ps1)
 
 ---
 
+## Update
+
+### Using built-in updater (recommended)
+```bash
+octrafic --update
+```
+
+The updater automatically detects your installation method and uses the appropriate update mechanism:
+- **Homebrew**: `brew upgrade octrafic`
+- **yay/paru**: Updates via AUR
+- **Winget**: `winget upgrade Octrafic.octrafic`
+- **deb/rpm packages**: Re-runs installation script
+- **Other installations**: Downloads and replaces binary automatically
+
+---
+
 ## Package Managers
 
 ### Windows - Winget
