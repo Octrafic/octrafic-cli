@@ -17,7 +17,6 @@
   <a href="https://github.com/Octrafic/octrafic-cli/releases"><img src="https://img.shields.io/github/v/release/Octrafic/octrafic-cli?style=flat-square" alt="Release"></a>
   <a href="https://github.com/Octrafic/octrafic-cli/blob/main/go.mod"><img src="https://img.shields.io/github/go-mod/go-version/Octrafic/octrafic-cli?style=flat-square" alt="Go Version"></a>
   <a href="https://github.com/Octrafic/octrafic-cli/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"></a>
-  <a href="https://github.com/Octrafic/octrafic-cli/stargazers"><img src="https://img.shields.io/github/stars/Octrafic/octrafic-cli?style=flat-square" alt="Stars"></a>
   <a href="https://goreportcard.com/report/github.com/Octrafic/octrafic-cli"><img src="https://goreportcard.com/badge/github.com/Octrafic/octrafic-cli?style=flat-square" alt="Go Report Card"></a>
 </p>
 
