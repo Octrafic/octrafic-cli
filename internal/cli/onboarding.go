@@ -1,18 +1,11 @@
 package cli
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
-	"time"
 
 	"github.com/Octrafic/octrafic-cli/internal/config"
 
-	"github.com/anthropics/anthropic-sdk-go"
-	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -327,15 +320,10 @@ func (m *OnboardingModel) handleKeyPress(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd)
 }
 
 func (m *OnboardingModel) testAPIKey() tea.Cmd {
-	// Capture provider and apiKey in local variables to avoid closure issues
 	provider := m.provider
 	apiKey := m.apiKey
 
 	return func() tea.Msg {
-		var models []string
-		var err error
-
-		// DEBUG: Check what provider value we have
 		if provider == "" {
 			return KeyTestResult{
 				Success:  false,
@@ -344,34 +332,38 @@ func (m *OnboardingModel) testAPIKey() tea.Cmd {
 			}
 		}
 
-		switch provider {
-		case "anthropic":
-			models, err = fetchAnthropicModels(apiKey)
-		case "openrouter":
-			models, err = fetchOpenRouterModels(apiKey)
-		case "openai":
-			models, err = fetchOpenAIModels(apiKey)
-		default:
-			return KeyTestResult{
-				Success:  false,
-				Error:    fmt.Sprintf("Unknown provider: %s", provider),
-				Provider: provider,
-			}
+		cfg := &config.Config{
+			Provider: provider,
+			APIKey:   apiKey,
 		}
 
-		if err != nil {
+		result := <-func() <-chan tea.Msg {
+			ch := make(chan tea.Msg, 1)
+			go func() {
+				cmd := FetchModelsForProvider(cfg)
+				ch <- cmd()
+			}()
+			return ch
+		}()
+
+		if msg, ok := result.(ModelsFetchedMsg); ok {
+			if msg.Error != "" {
+				return KeyTestResult{
+					Success:  false,
+					Error:    msg.Error,
+					Provider: msg.Provider,
+				}
+			}
 			return KeyTestResult{
-				Success:  false,
-				Error:    err.Error(),
-				Provider: provider,
+				Success:  true,
+				Models:   msg.Models,
+				Provider: msg.Provider,
 			}
 		}
-
-		// DEBUG: Add provider info to success message
 		return KeyTestResult{
-			Success:  true,
-			Models:   models,
-			Provider: fmt.Sprintf("%s (%d models)", provider, len(models)),
+			Success:  false,
+			Error:    "Unexpected response type",
+			Provider: provider,
 		}
 	}
 }
@@ -381,19 +373,38 @@ func (m *OnboardingModel) testServerConnection() tea.Cmd {
 	serverURL := m.serverURL
 
 	return func() tea.Msg {
-		models, err := fetchLocalModels(serverURL)
-		if err != nil {
-			return KeyTestResult{
-				Success:  false,
-				Error:    err.Error(),
-				Provider: provider,
-			}
+		cfg := &config.Config{
+			Provider: provider,
+			BaseURL:  serverURL,
 		}
 
+		result := <-func() <-chan tea.Msg {
+			ch := make(chan tea.Msg, 1)
+			go func() {
+				cmd := FetchModelsForProvider(cfg)
+				ch <- cmd()
+			}()
+			return ch
+		}()
+
+		if msg, ok := result.(ModelsFetchedMsg); ok {
+			if msg.Error != "" {
+				return KeyTestResult{
+					Success:  false,
+					Error:    msg.Error,
+					Provider: msg.Provider,
+				}
+			}
+			return KeyTestResult{
+				Success:  true,
+				Models:   msg.Models,
+				Provider: msg.Provider,
+			}
+		}
 		return KeyTestResult{
-			Success:  true,
-			Models:   models,
-			Provider: fmt.Sprintf("%s (%d models)", provider, len(models)),
+			Success:  false,
+			Error:    "Unexpected response type",
+			Provider: provider,
 		}
 	}
 }
@@ -787,230 +798,4 @@ func (m OnboardingModel) renderServerURL() string {
 		lipgloss.Center, lipgloss.Center,
 		content,
 	)
-}
-
-// fetchLocalModels fetches available models from a local OpenAI-compatible server (Ollama/llama.cpp)
-func fetchLocalModels(serverURL string) ([]string, error) {
-	url := strings.TrimSuffix(serverURL, "/") + "/v1/models"
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	client := &http.Client{Timeout: 5 * time.Second}
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("could not connect to server at %s: %w", serverURL, err)
-	}
-	defer func() { _ = res.Body.Close() }()
-
-	if res.StatusCode != 200 {
-		body, _ := io.ReadAll(res.Body)
-		return nil, fmt.Errorf("server returned status %d: %s", res.StatusCode, string(body))
-	}
-
-	var response struct {
-		Data []struct {
-			ID string `json:"id"`
-		} `json:"data"`
-	}
-
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	var modelIDs []string
-	for _, model := range response.Data {
-		modelIDs = append(modelIDs, model.ID)
-	}
-
-	if len(modelIDs) == 0 {
-		return nil, fmt.Errorf("no models found on server - make sure a model is loaded")
-	}
-
-	return modelIDs, nil
-}
-
-// fetchAnthropicModels fetches available models from Anthropic API
-func fetchAnthropicModels(apiKey string) ([]string, error) {
-	// Validate that this looks like an Anthropic key
-	if !strings.HasPrefix(apiKey, "sk-ant-") {
-		return nil, fmt.Errorf("API key doesn't look like an Anthropic key (should start with 'sk-ant-')")
-	}
-
-	client := anthropic.NewClient(
-		option.WithAPIKey(apiKey),
-	)
-
-	// Try to fetch models - this will validate the API key
-	page, err := client.Models.List(context.TODO(), anthropic.ModelListParams{})
-	if err != nil {
-		return nil, fmt.Errorf("anthropic API error: %w", err)
-	}
-
-	var models []string
-	for _, model := range page.Data {
-		modelID := string(model.ID)
-
-		// Anthropic models should NOT have provider prefixes like "anthropic/"
-		if strings.Contains(modelID, "/") {
-			return nil, fmt.Errorf("unexpected model format '%s' - looks like OpenRouter data, check your API key", modelID)
-		}
-
-		models = append(models, modelID)
-	}
-
-	if len(models) == 0 {
-		return nil, fmt.Errorf("no models returned from Anthropic API")
-	}
-
-	// Anthropic typically has <20 models, not hundreds
-	if len(models) > 50 {
-		return nil, fmt.Errorf("got %d models from Anthropic API - expected ~10-20, this looks wrong", len(models))
-	}
-
-	return models, nil
-}
-
-// OpenRouterModel represents a model from OpenRouter API
-type OpenRouterModel struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	ContextLength int    `json:"context_length"`
-	Pricing       struct {
-		Prompt     string `json:"prompt"`
-		Completion string `json:"completion"`
-	} `json:"pricing"`
-}
-
-// fetchOpenRouterModels fetches available models from OpenRouter API
-func fetchOpenRouterModels(apiKey string) ([]string, error) {
-	url := "https://openrouter.ai/api/v1/models"
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Add("Authorization", "Bearer "+apiKey)
-	req.Header.Add("HTTP-Referer", "https://octrafic.com")
-	req.Header.Add("X-Title", "Octrafic")
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch models: %w", err)
-	}
-	defer func() { _ = res.Body.Close() }()
-
-	if res.StatusCode != 200 {
-		body, _ := io.ReadAll(res.Body)
-		return nil, fmt.Errorf("API returned status %d: %s", res.StatusCode, string(body))
-	}
-
-	var response struct {
-		Data []OpenRouterModel `json:"data"`
-	}
-
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	// Sort models by popularity heuristic:
-	// 1. Popular providers first (anthropic, openai, google, meta)
-	// 2. Then by context length (longer = more capable)
-	// 3. Then alphabetically
-	models := response.Data
-
-	// Define popular prefixes for priority sorting
-	popularPrefixes := []string{
-		"anthropic/",
-		"openai/",
-		"google/",
-		"meta-llama/",
-		"mistralai/",
-		"x-ai/",
-	}
-
-	// Helper function to get priority score
-	getPriority := func(id string) int {
-		for i, prefix := range popularPrefixes {
-			if strings.HasPrefix(id, prefix) {
-				return i
-			}
-		}
-		return len(popularPrefixes) // Lower priority for others
-	}
-
-	// Sort: priority first, then context length descending, then alphabetically
-	for i := 0; i < len(models)-1; i++ {
-		for j := i + 1; j < len(models); j++ {
-			iPriority := getPriority(models[i].ID)
-			jPriority := getPriority(models[j].ID)
-
-			shouldSwap := false
-			if iPriority != jPriority {
-				shouldSwap = iPriority > jPriority
-			} else if models[i].ContextLength != models[j].ContextLength {
-				shouldSwap = models[i].ContextLength < models[j].ContextLength
-			} else {
-				shouldSwap = models[i].ID > models[j].ID
-			}
-
-			if shouldSwap {
-				models[i], models[j] = models[j], models[i]
-			}
-		}
-	}
-
-	var modelIDs []string
-	for _, model := range models {
-		modelIDs = append(modelIDs, model.ID)
-	}
-
-	return modelIDs, nil
-}
-
-// fetchOpenAIModels fetches available models from OpenAI API
-func fetchOpenAIModels(apiKey string) ([]string, error) {
-	url := "https://api.openai.com/v1/models"
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Add("Authorization", "Bearer "+apiKey)
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch models: %w", err)
-	}
-	defer func() { _ = res.Body.Close() }()
-
-	if res.StatusCode != 200 {
-		body, _ := io.ReadAll(res.Body)
-		return nil, fmt.Errorf("API returned status %d: %s", res.StatusCode, string(body))
-	}
-
-	var response struct {
-		Data []struct {
-			ID string `json:"id"`
-		} `json:"data"`
-	}
-
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	var modelIDs []string
-	for _, model := range response.Data {
-		// Filter for chat models
-		if strings.HasPrefix(model.ID, "gpt-") || strings.HasPrefix(model.ID, "o1-") || strings.HasPrefix(model.ID, "o3-") {
-			modelIDs = append(modelIDs, model.ID)
-		}
-	}
-
-	if len(modelIDs) == 0 {
-		return nil, fmt.Errorf("no chat models found in OpenAI account")
-	}
-
-	return modelIDs, nil
 }

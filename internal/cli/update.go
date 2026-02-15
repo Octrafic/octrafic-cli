@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Octrafic/octrafic-cli/internal/agents"
+	"github.com/Octrafic/octrafic-cli/internal/config"
 	"github.com/Octrafic/octrafic-cli/internal/core/auth"
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
@@ -132,6 +133,16 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.updateViewport()
 		return m, nil
 
+	case ModelsFetchedMsg:
+		if m.modelSelector != nil {
+			if msg.Error != "" {
+				m.modelSelector.SetError(msg.Error)
+			} else {
+				m.modelSelector.SetModels(msg.Models)
+			}
+		}
+		return m, nil
+
 	case clearHintTimeoutMsg:
 		if m.showClearHint && time.Since(m.lastEscPress) >= 700*time.Millisecond {
 			m.showClearHint = false
@@ -153,6 +164,10 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.agentState == StateWizard {
 			return handleWizardKeys(m, msg)
+		}
+
+		if m.agentState == StateModelSelector {
+			return handleModelSelectorState(&m, msg)
 		}
 
 		if m.agentState == StateShowingCommands {
@@ -630,6 +645,24 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 			return releaseNotesMsg{notes: notes, url: url, err: err}
 		}
 		return m, cmd, true
+
+	case "/models":
+		m.addMessage("")
+		m.addMessage(renderUserLabel() + " " + userInput)
+		m.addMessage("")
+		m.lastMessageRole = "user"
+
+		m.modelSelector = NewModelSelector()
+		m.modelSelector.isLoading = true
+		m.agentState = StateModelSelector
+
+		cfg, err := config.Load()
+		if err != nil {
+			m.modelSelector.SetError("Failed to load config: " + err.Error())
+			return m, nil, true
+		}
+		m.modelSelector.SetProvider(cfg.Provider)
+		return m, FetchModelsForProvider(cfg), true
 
 	case "/info":
 		m.addMessage("")
@@ -1125,6 +1158,38 @@ func handleShowTestSelection(m *TestUIModel, msg showTestSelectionMsg) (tea.Mode
 
 	m.selectedTestIndex = 0
 	m.agentState = StateShowingTestPlan
+
+	return m, nil
+}
+
+func handleModelSelectorState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.modelSelector == nil {
+		m.agentState = StateIdle
+		return m, nil
+	}
+
+	done, selectedModel := m.modelSelector.HandleKey(msg)
+
+	if done {
+		if selectedModel != "" {
+			cfg, err := config.Load()
+			if err != nil {
+				m.addMessage(m.errorStyle.Render("Failed to load config: " + err.Error()))
+			} else {
+				cfg.Model = selectedModel
+				if err := cfg.Save(); err != nil {
+					m.addMessage(m.errorStyle.Render("Failed to save config: " + err.Error()))
+				} else {
+					m.modelName = selectedModel
+					m.addMessage(m.successStyle.Render("✓ Model changed to: " + selectedModel))
+				}
+			}
+			m.addMessage("")
+		}
+		m.modelSelector = nil
+		m.agentState = StateIdle
+		m.lastMessageRole = "assistant"
+	}
 
 	return m, nil
 }
