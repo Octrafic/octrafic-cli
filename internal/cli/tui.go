@@ -32,6 +32,7 @@ const (
 	StateShowingTestPlan
 	StateRunningTests
 	StateWizard
+	StateModelSelector
 )
 
 type ExecutionMode int
@@ -52,6 +53,7 @@ var availableCommands = []Command{
 	{Name: "/logout", Description: "Logout and clear session"},
 	{Name: "/exit", Description: "Exit the application"},
 	{Name: "/auth", Description: "Open authentication wizard"},
+	{Name: "/models", Description: "Select AI model"},
 	{Name: "/info", Description: "Show current project info"},
 	{Name: "/release-notes", Description: "Show latest release notes"},
 }
@@ -148,6 +150,9 @@ type TestUIModel struct {
 
 	// Wizard state
 	wizardState *WizardState
+
+	// Model selector
+	modelSelector *ModelSelector
 
 	// Chat viewport
 	viewport viewport.Model
@@ -355,6 +360,14 @@ func (m TestUIModel) View() string {
 	if m.agentState == StateWizard {
 		s.WriteString("\n")
 		s.WriteString(m.RenderWizard())
+		s.WriteString("\n")
+		return s.String()
+	}
+
+	// Show model selector
+	if m.agentState == StateModelSelector && m.modelSelector != nil {
+		s.WriteString("\n")
+		s.WriteString(m.modelSelector.Render())
 		s.WriteString("\n")
 		return s.String()
 	}
