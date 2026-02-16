@@ -32,6 +32,7 @@ export default defineConfig({
       {
         text: 'Guides',
         items: [
+          { text: 'Chat Features', link: '/guides/chat-features' },
           { text: 'Project Management', link: '/guides/project-management' },
           { text: 'Providers', link: '/guides/providers' },
           { text: 'Authentication', link: '/guides/authentication' },
@@ -41,6 +42,7 @@ export default defineConfig({
       {
         text: 'Release Notes',
         items: [
+          { text: 'v0.3.0', link: '/releases/v0.3.0' },
           { text: 'v0.2.1', link: '/releases/v0.2.1' },
           { text: 'v0.2.0', link: '/releases/v0.2.0' },
           { text: 'v0.1.0', link: '/releases/v0.1.0' }
