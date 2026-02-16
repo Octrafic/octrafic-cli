@@ -9,17 +9,17 @@ Octrafic automatically saves your conversations with each project, allowing you 
 ### Automatic Saving
 
 Every chat session is automatically saved with:
-- **Full conversation context** — All messages and AI responses
-- **Timestamp tracking** — When the conversation was created and last updated
-- **Project association** — Each conversation is linked to its project
+- **Full conversation context** - All messages and AI responses
+- **Timestamp tracking** - When the conversation was created and last updated
+- **Project association** - Each conversation is linked to its project
 
 ### Resuming Conversations
 
 When you launch Octrafic without arguments, you can:
 
-1. **Select a project** — Browse your saved projects
-2. **Choose a conversation** — View and select from previous conversations
-3. **Start fresh** — Create a new conversation for the project
+1. **Select a project** - Browse your saved projects
+2. **Choose a conversation** - View and select from previous conversations
+3. **Start fresh** - Create a new conversation for the project
 
 ```bash
 # Launch interactive mode
@@ -32,10 +32,10 @@ octrafic
 
 ### Managing Conversations
 
-- **View history** — All conversations are listed with their creation date
-- **Continue work** — Resume exactly where you stopped
-- **Multiple threads** — Keep separate conversations per project
-- **Clear history** — Use `/clear` command to start fresh in current session
+- **View history** - All conversations are listed with their creation date
+- **Continue work** - Resume exactly where you stopped
+- **Multiple threads** - Keep separate conversations per project
+- **Clear history** - Use `/clear` command to start fresh in current session
 
 ## File Uploads
 
@@ -43,17 +43,17 @@ Upload files directly in chat to provide additional context or share API specifi
 
 ### Supported Use Cases
 
-- **API Specifications** — Upload OpenAPI/Swagger files
-- **Example Requests** — Share cURL commands or request templates
-- **Documentation** — Attach API documentation files
-- **Configuration** — Upload environment or config files
+- **API Specifications** - Upload OpenAPI/Swagger files
+- **Example Requests** - Share cURL commands or request templates
+- **Documentation** - Attach API documentation files
+- **Configuration** - Upload environment or config files
 
 ### How to Upload
 
-1. **Trigger file picker** — Type `@` followed by a path or press Tab
-2. **Navigate** — Use ↑/↓ arrows to browse files and directories
-3. **Select** — Press Enter to attach the selected file
-4. **Send** — The file is included with your message
+1. **Trigger file picker** - Type `@` followed by a path or press Tab
+2. **Navigate** - Use ↑/↓ arrows to browse files and directories
+3. **Select** - Press Enter to attach the selected file
+4. **Send** - The file is included with your message
 
 ```
 Example:
@@ -178,6 +178,6 @@ For complex queries, provide context step by step:
 
 ## Related Guides
 
-- [Project Management](./project-management.md) — Managing projects and configurations
-- [Authentication](./authentication.md) — Setting up API authentication
-- [Providers](./providers.md) — Configuring AI providers and models
+- [Project Management](./project-management.md) - Managing projects and configurations
+- [Authentication](./authentication.md) - Setting up API authentication
+- [Providers](./providers.md) - Configuring AI providers and models

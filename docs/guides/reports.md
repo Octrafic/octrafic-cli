@@ -37,8 +37,8 @@ The file name includes a timestamp so reports never overwrite each other.
 ## What's in the report
 
 - Title and date
-- Summary — total tests, passed, failed
-- Results table — method, endpoint, status code, duration
+- Summary - total tests, passed, failed
+- Results table - method, endpoint, status code, duration
 - AI analysis and recommendations
 
 ## Example prompts
@@ -57,9 +57,9 @@ generate a report and name it users-api-tests.pdf
 
 ## Styling
 
-Reports use the Octrafic brand theme — sky blue headers, styled tables, and dark code blocks. Each report includes page numbers and a footer with the generation timestamp.
+Reports use the Octrafic brand theme - sky blue headers, styled tables, and dark code blocks. Each report includes page numbers and a footer with the generation timestamp.
 
 ## Related
 
-- [Quick Start](../getting-started/quick-start.md) — Getting started with Octrafic
-- [Authentication](./authentication.md) — Configuring auth for API tests
+- [Quick Start](../getting-started/quick-start.md) - Getting started with Octrafic
+- [Authentication](./authentication.md) - Configuring auth for API tests
