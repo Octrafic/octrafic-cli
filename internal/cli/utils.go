@@ -363,9 +363,17 @@ func (m *TestUIModel) loadConversationHistory() error {
 				Content: msg.Content,
 			}
 
+			// Use display_content from metadata if available, otherwise use content
+			displayContent := msg.Content
+			if msg.Metadata != nil {
+				if dc := getString(msg.Metadata, "display_content"); dc != "" {
+					displayContent = dc
+				}
+			}
+
 			userMessage := lipgloss.NewStyle().
 				Foreground(Theme.TextMuted).
-				Render("> ") + msg.Content
+				Render("> ") + displayContent
 			m.addMessage("")
 			m.addMessage(userMessage)
 

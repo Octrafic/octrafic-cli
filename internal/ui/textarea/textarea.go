@@ -250,6 +250,10 @@ type Model struct {
 	// there's no limit.
 	MaxWidth int
 
+	// Highlighter applies syntax highlighting to the text.
+	// It takes the text content and the base style (context) to allow merging.
+	Highlighter func(text string, baseStyle lipgloss.Style) string
+
 	// If promptFunc is set, it replaces Prompt as a generator for
 	// prompt strings at the beginning of each line.
 	promptFunc func(line int) string
@@ -327,6 +331,11 @@ func New() Model {
 	m.DynamicHeight = false
 
 	return m
+}
+
+// SetHighlighter sets the function used to highlight text.
+func (m *Model) SetHighlighter(h func(string, lipgloss.Style) string) {
+	m.Highlighter = h
 }
 
 // DefaultStyles returns the default styles for focused and blurred states for
@@ -475,6 +484,30 @@ func (m Model) Value() string {
 	}
 
 	return strings.TrimSuffix(v.String(), "\n")
+}
+
+// CursorIndex returns the cursor position as a byte index in the string returned by Value().
+func (m Model) CursorIndex() int {
+	index := 0
+	// Sum length of previous lines + 1 for newline
+	for i := 0; i < m.row; i++ {
+		// m.value[i] is []rune
+		// Value() converts runes to string, then joins with \n
+		// So we need byte length of the string representation
+		if i < len(m.value) {
+			index += len(string(m.value[i])) + 1
+		}
+	}
+	// Add length of current line up to cursor
+	if m.row < len(m.value) {
+		line := m.value[m.row]
+		if m.col <= len(line) {
+			index += len(string(line[:m.col]))
+		} else {
+			index += len(string(line)) // Should cover full line if col is beyond
+		}
+	}
+	return index
 }
 
 // Length returns the number of characters currently in the text input.
@@ -1241,17 +1274,36 @@ func (m Model) View() string {
 				padding -= m.width - strwidth
 			}
 			if m.row == l && lineInfo.RowOffset == wl {
-				s.WriteString(style.Render(string(wrappedLine[:lineInfo.ColumnOffset])))
+				// Cursor line segment
+				head := string(wrappedLine[:lineInfo.ColumnOffset])
+				if m.Highlighter != nil {
+					s.WriteString(m.Highlighter(head, style))
+				} else {
+					s.WriteString(style.Render(head))
+				}
+
 				if m.col >= len(line) && lineInfo.CharOffset >= m.width {
 					m.Cursor.SetChar(" ")
 					s.WriteString(m.Cursor.View())
 				} else {
 					m.Cursor.SetChar(string(wrappedLine[lineInfo.ColumnOffset]))
-					s.WriteString(style.Render(m.Cursor.View()))
-					s.WriteString(style.Render(string(wrappedLine[lineInfo.ColumnOffset+1:])))
+					s.WriteString(style.Render(m.Cursor.View())) // Cursor gets base style?
+
+					tail := string(wrappedLine[lineInfo.ColumnOffset+1:])
+					if m.Highlighter != nil {
+						s.WriteString(m.Highlighter(tail, style))
+					} else {
+						s.WriteString(style.Render(tail))
+					}
 				}
 			} else {
-				s.WriteString(style.Render(string(wrappedLine)))
+				// Non-cursor line segment (or cursor not on this wrapped line)
+				content := string(wrappedLine)
+				if m.Highlighter != nil {
+					s.WriteString(m.Highlighter(content, style))
+				} else {
+					s.WriteString(style.Render(content))
+				}
 			}
 			s.WriteString(style.Render(strings.Repeat(" ", max(0, padding))))
 			s.WriteRune('\n')
