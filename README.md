@@ -45,11 +45,6 @@ curl -fsSL https://octrafic.com/install.sh | bash
 iex (iwr -useb https://octrafic.com/install.ps1)
 ```
 
-**Windows (Winget):**
-```powershell
-winget install Octrafic.octrafic
-```
-
 **macOS (Homebrew):**
 ```bash
 brew install octrafic/tap/octrafic

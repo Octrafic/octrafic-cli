@@ -30,7 +30,6 @@ const (
 	MethodHomebrew InstallMethod = "homebrew"
 	MethodYay      InstallMethod = "yay"
 	MethodParu     InstallMethod = "paru"
-	MethodWinget   InstallMethod = "winget"
 	MethodDeb      InstallMethod = "deb"
 	MethodRPM      InstallMethod = "rpm"
 	MethodScript   InstallMethod = "script"
@@ -197,12 +196,6 @@ func DetectInstallationMethod() InstallMethod {
 		return MethodScript
 
 	case "windows":
-		// Check for winget
-		if cmdExists("winget") {
-			if out, err := exec.Command("winget", "list", "--id", "Octrafic.octrafic").CombinedOutput(); err == nil && strings.Contains(string(out), "Octrafic.octrafic") {
-				return MethodWinget
-			}
-		}
 		// Default to script for Windows
 		return MethodScript
 
@@ -234,8 +227,6 @@ func PerformUpdate(currentVersion string) error {
 		return updateYay()
 	case MethodParu:
 		return updateParu()
-	case MethodWinget:
-		return updateWinget()
 	case MethodDeb, MethodRPM:
 		return updateScript()
 	case MethodScript, MethodManual, MethodUnknown:
@@ -269,14 +260,6 @@ func updateYay() error {
 func updateParu() error {
 	fmt.Println("Updating via paru...")
 	cmd := exec.Command("paru", "-Syu", "octrafic-bin", "--noconfirm")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
-func updateWinget() error {
-	fmt.Println("Updating via winget...")
-	cmd := exec.Command("winget", "upgrade", "Octrafic.octrafic")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

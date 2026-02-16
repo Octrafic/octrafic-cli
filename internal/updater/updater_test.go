@@ -152,7 +152,6 @@ func TestDetectInstallationMethod(t *testing.T) {
 		MethodHomebrew,
 		MethodYay,
 		MethodParu,
-		MethodWinget,
 		MethodDeb,
 		MethodRPM,
 		MethodScript,
