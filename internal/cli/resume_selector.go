@@ -78,11 +78,16 @@ func NewResumeSelectorModel(projects []*storage.Project, version string) ResumeS
 	ti.CharLimit = 50
 	ti.Width = 40
 
+	cursor := 1
+	if len(projects) == 0 {
+		cursor = 0
+	}
+
 	return ResumeSelectorModel{
 		stage:            stageSelectProject,
 		projects:         projects,
 		filteredProjects: projects,
-		projectCursor:    1, // Start at first real project, not "Create new"
+		projectCursor:    cursor,
 		searchInput:      ti,
 		searching:        false,
 		version:          version,

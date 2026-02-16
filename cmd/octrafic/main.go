@@ -111,24 +111,24 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 			return
 		}
 		if !hasURL {
-			logger.Error("API URL is required")
+			fmt.Fprintf(os.Stderr, "Error: API URL is required (-u, --url)\n")
 			os.Exit(1)
 		}
 
 		if !hasSpec {
-			logger.Error("Specification file is required")
+			fmt.Fprintf(os.Stderr, "Error: Specification file is required (-s, --spec)\n")
 			os.Exit(1)
 		}
 
 		authProvider := buildAuthFromFlags()
 
 		if err := authProvider.Validate(); err != nil {
-			logger.Error("Invalid authentication configuration", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Invalid authentication configuration: %v\n", err)
 			os.Exit(1)
 		}
 
 		if err := storage.ValidateSpecPath(specFile); err != nil {
-			logger.Error("Spec path validation failed", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Specification file not found or invalid: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -183,11 +183,11 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 			} else {
 				conflict, err := storage.CheckNameConflict(projectName, "")
 				if err != nil {
-					logger.Error("Error checking name conflicts", logger.Err(err))
+					fmt.Fprintf(os.Stderr, "Error: Failed to check for project name conflicts: %v\n", err)
 					os.Exit(1)
 				}
 				if conflict != nil {
-					logger.Error("Project already exists", logger.String("name", projectName))
+					fmt.Fprintf(os.Stderr, "Error: Project with name '%s' already exists\n", projectName)
 					os.Exit(1)
 				}
 				projectID = generateUUID()
@@ -197,7 +197,7 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 		}
 		project, _, err := storage.CreateOrUpdateProject(projectID, projectName, apiURL, specFile, "", isTemporary)
 		if err != nil {
-			logger.Error("Error processing specification", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Failed to process specification: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -213,13 +213,13 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 
 		specContent, err := parser.ParseSpecification(specFile)
 		if err != nil {
-			logger.Error("Error parsing specification", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Failed to parse specification: %v\n", err)
 			os.Exit(1)
 		}
 
 		analysis, err := analyzer.AnalyzeAPI(apiURL, specContent)
 		if err != nil {
-			logger.Error("Error analyzing API", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Failed to analyze API: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -354,7 +354,7 @@ func buildAuthFromEnvironments() auth.AuthProvider {
 	case "bearer":
 		authToken := os.Getenv(authTokenEnvVar)
 		if authToken == "" {
-			logger.Error("OCTRAFIC_AUTH_TOKEN is required when using OCTRAFIC_AUTH_TYPE bearer")
+			fmt.Fprintf(os.Stderr, "Error: %s is required when using %s bearer\n", authTokenEnvVar, authTypeEnvVar)
 			os.Exit(1)
 		}
 		return auth.NewBearerAuth(authToken)
@@ -363,7 +363,7 @@ func buildAuthFromEnvironments() auth.AuthProvider {
 		authValue := os.Getenv(authValueEnvVar)
 
 		if authKey == "" || authValue == "" {
-			logger.Error("OCTRAFIC_AUTH_KEY and OCTRAFIC_AUTH_VALUE are required when using OCTRAFIC_AUTH_TYPE apikey")
+			fmt.Fprintf(os.Stderr, "Error: %s and %s are required when using %s apikey\n", authKeyEnvVar, authValueEnvVar, authTypeEnvVar)
 			os.Exit(1)
 		}
 		return auth.NewAPIKeyAuth(authKey, authValue, "header")
@@ -372,14 +372,14 @@ func buildAuthFromEnvironments() auth.AuthProvider {
 		authPass := os.Getenv(authPassEnvVar)
 
 		if authUser == "" || authPass == "" {
-			logger.Error("OCTRAFIC_AUTH_USER and OCTRAFIC_AUTH_PASS are required when using OCTRAFIC_AUTH_TYPE basic")
+			fmt.Fprintf(os.Stderr, "Error: %s and %s are required when using %s basic\n", authUserEnvVar, authPassEnvVar, authTypeEnvVar)
 			os.Exit(1)
 		}
 		return auth.NewBasicAuth(authUser, authPass)
 	case "none":
 		return &auth.NoAuth{}
 	default:
-		logger.Error("Invalid OCTRAFIC_AUTH_TYPE", logger.String("type", authType))
+		fmt.Fprintf(os.Stderr, "Error: Invalid %s: %s\n", authTypeEnvVar, authType)
 		os.Exit(1)
 		return nil
 	}
@@ -389,21 +389,21 @@ func buildAuthFromFlags() auth.AuthProvider {
 	switch authType {
 	case "bearer":
 		if authToken == "" {
-			logger.Error("--token is required when using --auth bearer")
+			fmt.Fprintf(os.Stderr, "Error: --token is required when using --auth bearer\n")
 			os.Exit(1)
 		}
 		return auth.NewBearerAuth(authToken)
 
 	case "apikey":
 		if authKey == "" || authValue == "" {
-			logger.Error("--key and --value are required when using --auth apikey")
+			fmt.Fprintf(os.Stderr, "Error: --key and --value are required when using --auth apikey\n")
 			os.Exit(1)
 		}
 		return auth.NewAPIKeyAuth(authKey, authValue, "header")
 
 	case "basic":
 		if authUser == "" || authPass == "" {
-			logger.Error("--user and --pass are required when using --auth basic")
+			fmt.Fprintf(os.Stderr, "Error: --user and --pass are required when using --auth basic\n")
 			os.Exit(1)
 		}
 		return auth.NewBasicAuth(authUser, authPass)
@@ -412,7 +412,7 @@ func buildAuthFromFlags() auth.AuthProvider {
 		return &auth.NoAuth{}
 
 	default:
-		logger.Error("Invalid auth type", logger.String("type", authType))
+		fmt.Fprintf(os.Stderr, "Error: Invalid auth type: %s\n", authType)
 		os.Exit(1)
 		return nil
 	}
@@ -463,7 +463,7 @@ func generateUUID() string {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
 	if err != nil {
-		logger.Error("Failed to generate UUID", logger.Err(err))
+		fmt.Fprintf(os.Stderr, "Error: Failed to generate UUID: %v\n", err)
 		os.Exit(1)
 	}
 	b[6] = (b[6] & 0x0f) | 0x40
@@ -505,24 +505,24 @@ func loadAndStartProject(project *storage.Project) {
 			var newPath string
 			_, _ = fmt.Scanln(&newPath)
 			if err := storage.ValidateSpecPath(newPath); err != nil {
-				logger.Error("Spec path validation failed", logger.Err(err))
+				fmt.Fprintf(os.Stderr, "Error: Spec path validation failed: %v\n", err)
 				os.Exit(1)
 			}
 			project.SpecPath = newPath
 			if err := storage.SaveProject(project); err != nil {
-				logger.Warn("Failed to save updated spec path", logger.Err(err))
+				fmt.Printf("Warning: Failed to save updated spec path: %v\n", err)
 			}
 		}
 
 		specContent, err := parser.ParseSpecification(project.SpecPath)
 		if err != nil {
-			logger.Error("Error parsing specification", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Failed to parse specification: %v\n", err)
 			os.Exit(1)
 		}
 
 		analysis, err = analyzer.AnalyzeAPI(project.BaseURL, specContent)
 		if err != nil {
-			logger.Error("Error analyzing API", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Failed to analyze API: %v\n", err)
 			os.Exit(1)
 		}
 	}
@@ -535,14 +535,8 @@ func handleFullscreenSelector() {
 	for {
 		projects, err := storage.ListNamedProjects()
 		if err != nil {
-			logger.Error("Error loading projects", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Failed to load projects: %v\n", err)
 			os.Exit(1)
-		}
-
-		if len(projects) == 0 {
-			fmt.Println("No projects found. Create a project first:")
-			fmt.Println("  octrafic -u <api-url> -s <spec-file> -n <project-name>")
-			os.Exit(0)
 		}
 
 		selectorModel := cli.NewResumeSelectorModel(projects, version)
@@ -550,7 +544,7 @@ func handleFullscreenSelector() {
 
 		finalModel, err := p.Run()
 		if err != nil {
-			logger.Error("Error running selector", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Failed to run project selector: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -633,7 +627,7 @@ func promptNewProjectInteractive() bool {
 func handleProjectConversationSelector(projectName string) {
 	project, err := storage.FindProjectByName(projectName)
 	if err != nil {
-		logger.Error("Project not found", logger.String("name", projectName))
+		fmt.Fprintf(os.Stderr, "Error: Project '%s' not found\n", projectName)
 		os.Exit(1)
 	}
 
@@ -642,7 +636,7 @@ func handleProjectConversationSelector(projectName string) {
 
 	finalModel, err := p.Run()
 	if err != nil {
-		logger.Error("Error running conversation selector", logger.Err(err))
+		fmt.Fprintf(os.Stderr, "Error: Failed to run conversation selector: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -667,7 +661,7 @@ func handleResumeByUUID(conversationID string) {
 	// Need to find which project this conversation belongs to
 	projects, err := storage.ListNamedProjects()
 	if err != nil {
-		logger.Error("Error loading projects", logger.Err(err))
+		fmt.Fprintf(os.Stderr, "Error: Failed to load projects: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -684,7 +678,7 @@ func handleResumeByUUID(conversationID string) {
 	}
 
 	if foundProject == nil || foundConversation == nil {
-		logger.Error("Conversation not found", logger.String("id", conversationID))
+		fmt.Fprintf(os.Stderr, "Error: Conversation with ID '%s' not found\n", conversationID)
 		os.Exit(1)
 	}
 
@@ -728,24 +722,24 @@ func loadAndStartConversation(project *storage.Project, conversation *storage.Co
 			var newPath string
 			_, _ = fmt.Scanln(&newPath)
 			if err := storage.ValidateSpecPath(newPath); err != nil {
-				logger.Error("Spec path validation failed", logger.Err(err))
+				fmt.Fprintf(os.Stderr, "Error: Spec path validation failed: %v\n", err)
 				os.Exit(1)
 			}
 			project.SpecPath = newPath
 			if err := storage.SaveProject(project); err != nil {
-				logger.Warn("Failed to save updated spec path", logger.Err(err))
+				fmt.Printf("Warning: Failed to save updated spec path: %v\n", err)
 			}
 		}
 
 		specContent, err := parser.ParseSpecification(project.SpecPath)
 		if err != nil {
-			logger.Error("Error parsing specification", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Failed to parse specification: %v\n", err)
 			os.Exit(1)
 		}
 
 		analysis, err = analyzer.AnalyzeAPI(project.BaseURL, specContent)
 		if err != nil {
-			logger.Error("Error analyzing API", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Failed to analyze API: %v\n", err)
 			os.Exit(1)
 		}
 	}
@@ -769,7 +763,7 @@ func main() {
 	}
 
 	if err := rootCmd.Execute(); err != nil {
-		logger.Error("Command execution failed", logger.Err(err))
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	if debugFilePath != "" {
@@ -803,7 +797,7 @@ func runOnboarding() bool {
 
 	finalModel, err := p.Run()
 	if err != nil {
-		logger.Error("Error running onboarding", logger.Err(err))
+		fmt.Fprintf(os.Stderr, "Error: Failed to run onboarding: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -823,7 +817,7 @@ func runOnboarding() bool {
 func initLogger() {
 	if debugFilePath != "" {
 		if err := logger.Init(true, debugFilePath); err != nil {
-			logger.Error("Failed to initialize logger", logger.Err(err))
+			fmt.Fprintf(os.Stderr, "Error: Failed to initialize logger: %v\n", err)
 			os.Exit(1)
 		}
 		logger.Info("Octrafic starting", logger.String("log_file", debugFilePath), logger.Bool("debug", true))
