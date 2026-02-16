@@ -154,6 +154,16 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return *newM, cmd
 		}
 
+		// Handle file picker specific keys first
+		if m.showFilePicker {
+			if newM, cmd, handled := handleFilePickerState(&m, msg); handled {
+				// After handling, verify state (did user delete '@' with backspace?)
+				// Actually backspace is handled in handleFilePickerState.
+				// But we should check if we should still show it.
+				return newM, cmd
+			}
+		}
+
 		if m.agentState == StateShowingTestPlan {
 			return handleTestPlanState(&m, msg)
 		}
@@ -178,6 +188,16 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.Type {
 			case tea.KeyEnter:
 				userInput := m.textarea.Value()
+				var displayInput, llmInput string
+
+				// Handle file content expansion if not escaped newline
+				if !strings.HasSuffix(userInput, "\\") {
+					displayInput, llmInput = m.expandFileContent(userInput)
+				} else {
+					displayInput = userInput
+					llmInput = userInput
+				}
+
 				if strings.HasSuffix(userInput, "\\") {
 					newValue := strings.TrimSuffix(userInput, "\\") + "\n"
 					m.textarea.SetValue(newValue)
@@ -229,15 +249,20 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 					userMessage := lipgloss.NewStyle().
 						Foreground(Theme.TextMuted).
-						Render("> ") + userInput
+						Render("> ") + displayInput
 					m.addMessage("")
 					m.addMessage(userMessage)
-					m.saveMessageToConversation("user", userInput, nil)
+
+					// Save clean path to storage, keep display version (with colors) in metadata for UI restoration
+					meta := map[string]interface{}{
+						"display_content": displayInput,
+					}
+					m.saveMessageToConversation("user", llmInput, meta)
 					m.lastMessageRole = "user"
 
 					m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
 						Role:    "user",
-						Content: userInput,
+						Content: llmInput,
 					})
 
 					m.cancelStream = make(chan struct{})
@@ -246,7 +271,7 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
 
 					var cmds []tea.Cmd
-					cmds = append(cmds, animationTick(), m.sendChatMessage(userInput))
+					cmds = append(cmds, animationTick(), m.sendChatMessage(llmInput))
 					if m.conversationTitle != "" {
 						cmds = append(cmds, tea.SetWindowTitle(m.conversationTitle+" - Octrafic"))
 					}
@@ -287,6 +312,47 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, cmd
 			}
 			m.textarea, cmd = m.textarea.Update(msg)
+
+			// Check if we should close the picker due to cursor movement or text changes
+			// executed by the textarea update (e.g. left arrow, deletion)
+			if m.showFilePicker {
+				val := m.textarea.Value()
+				cursor := m.textarea.CursorIndex()
+
+				// Simple check: do we have an '@' left of cursor?
+				// Find last '@'
+				lastAt := -1
+				for i := cursor - 1; i >= 0; i-- {
+					if i < len(val) && val[i] == '@' {
+						lastAt = i
+						break
+					}
+				}
+
+				if lastAt == -1 {
+					// No '@' before cursor, close picker
+					m.showFilePicker = false
+					m.fileFilterText = ""
+				} else {
+					// Update filter text to match what's between @ and cursor
+					// This keeps it in sync if user moves cursor or types
+					// However, we need to be careful not to overwrite if we just did a path completion
+					// But for now, sync is good.
+					if cursor > lastAt+1 {
+						m.fileFilterText = val[lastAt+1 : cursor]
+					} else {
+						m.fileFilterText = ""
+					}
+					m.updateFileSuggestions()
+				}
+			}
+
+			if msg.String() == "@" {
+				m.showFilePicker = true
+				m.fileFilterText = ""
+				m.selectedFileIndex = 0
+				m.updateFileSuggestions()
+			}
 
 			if msg.Type == tea.KeyRunes || msg.Type == tea.KeyBackspace || msg.Type == tea.KeyDelete {
 				m.historyIndex = -1

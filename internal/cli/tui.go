@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Octrafic/octrafic-cli/internal/ui/textarea"
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -209,6 +209,12 @@ type TestUIModel struct {
 
 	width  int
 	height int
+
+	// File picker
+	showFilePicker    bool
+	filteredFiles     []string
+	selectedFileIndex int
+	fileFilterText    string
 }
 
 func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis, authProvider auth.AuthProvider, version string) *TestUIModel {
@@ -224,6 +230,26 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(Theme.TextSubtle)
 	// Keep default Enter behavior for newlines (textarea handles it)
 	// Ctrl+Enter will be used to send messages (handled in Update)
+
+	// Syntax highlighting for file paths
+	ta.SetHighlighter(func(text string, baseStyle lipgloss.Style) string {
+		// Highlight words starting with @
+		// Simple approach: split by space, check prefix, reassemble
+		// We use baseStyle.Inherit to keep background/context but override foreground
+		words := strings.Split(text, " ")
+		for i, word := range words {
+			if strings.HasPrefix(word, "@") {
+				// We create a new style inheriting from base (likely cursor line bg)
+				// and then set the foreground
+				style := baseStyle.Foreground(Theme.Primary)
+				words[i] = style.Render(word)
+			} else {
+				// Render normal words with base style to ensure consistency
+				words[i] = baseStyle.Render(word)
+			}
+		}
+		return strings.Join(words, " ")
+	})
 
 	// Viewport - will be resized on first WindowSizeMsg
 	vp := viewport.New(120, 20)
@@ -531,6 +557,11 @@ func (m TestUIModel) View() string {
 			escHint := lipgloss.NewStyle().Foreground(Theme.TextSubtle).Render(" to cancel")
 			s.WriteString(" " + animStyle.Render(anim) + " " + escKey + escHint + "\n")
 		}
+	}
+
+	// Show file picker overlay
+	if m.showFilePicker {
+		s.WriteString(m.renderFilePicker())
 	}
 
 	return s.String()

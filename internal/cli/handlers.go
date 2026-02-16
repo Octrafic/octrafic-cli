@@ -9,6 +9,9 @@ import (
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"maps"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -74,7 +77,16 @@ func (m *TestUIModel) sendChatMessage(_ string) tea.Cmd {
 			resultChan := make(chan chatResult, 1)
 
 			go func() {
-				resp, err := m.localAgent.ChatStream(m.conversationHistory, true,
+				expandedHistory := make([]agent.ChatMessage, len(m.conversationHistory))
+				for i, msg := range m.conversationHistory {
+					expandedHistory[i] = msg
+
+					if msg.Role == "user" && strings.Contains(msg.Content, "@") {
+						expandedHistory[i].Content = expandContentForLLM(msg.Content)
+					}
+				}
+
+				resp, err := m.localAgent.ChatStream(expandedHistory, true,
 					func(chunk string, isThought bool) {
 						select {
 						case <-cancelChan:
@@ -138,6 +150,30 @@ func (m *TestUIModel) sendChatMessage(_ string) tea.Cmd {
 
 		return streamReasoningMsg{channel: streamChan}
 	}
+}
+
+// expandContentForLLM takes a string with @/abs/path tokens and replaces them with file content
+func expandContentForLLM(input string) string {
+	words := strings.Split(input, " ")
+	for i, word := range words {
+		if strings.HasPrefix(word, "@") {
+			path := word[1:]
+			info, err := os.Stat(path)
+			if err == nil && !info.IsDir() {
+				content, err := os.ReadFile(path)
+				if err == nil {
+					ext := filepath.Ext(path)
+					lang := ""
+					if len(ext) > 1 {
+						lang = ext[1:]
+					}
+					expanded := fmt.Sprintf("File: %s\n```%s\n%s\n```", path, lang, string(content))
+					words[i] = expanded
+				}
+			}
+		}
+	}
+	return strings.Join(words, " ")
 }
 
 // waitForReasoning waits for the next chunk from the streaming channel.
