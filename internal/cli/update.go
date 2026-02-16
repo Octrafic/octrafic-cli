@@ -219,6 +219,7 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 								title = title[:97] + "..."
 							}
 							_, _ = storage.CreateConversation(m.currentProject.ID, m.conversationID, title)
+							m.conversationTitle = title
 						}
 					}
 
@@ -243,10 +244,13 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.agentState = StateProcessing
 					m.animationFrame = 0
 					m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
-					return m, tea.Batch(
-						animationTick(),
-						m.sendChatMessage(userInput),
-					)
+
+					var cmds []tea.Cmd
+					cmds = append(cmds, animationTick(), m.sendChatMessage(userInput))
+					if m.conversationTitle != "" {
+						cmds = append(cmds, tea.SetWindowTitle(m.conversationTitle+" - Octrafic"))
+					}
+					return m, tea.Batch(cmds...)
 				}
 			case tea.KeyUp:
 				if len(m.commandHistory) > 0 {

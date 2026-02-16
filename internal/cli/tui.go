@@ -130,6 +130,7 @@ type TestUIModel struct {
 	lastMessageRole          string // Track who sent the last message ("user" or "assistant")
 	conversationHistory      []agent.ChatMessage
 	conversationID           string // Current conversation UUID
+	conversationTitle        string // Current conversation title
 	isLoadedConversation     bool   // Whether this is a loaded conversation
 	currentToolCall          *agent.ToolCall
 	pendingToolCall          *agent.ToolCall
@@ -299,7 +300,11 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 
 // Init initializes the model
 func (m TestUIModel) Init() tea.Cmd {
-	return tea.Batch(textarea.Blink, m.spinner.Tick, tea.SetWindowTitle("Octrafic"))
+	title := "Octrafic"
+	if m.conversationTitle != "" {
+		title = m.conversationTitle + " - Octrafic"
+	}
+	return tea.Batch(textarea.Blink, m.spinner.Tick, tea.SetWindowTitle(title))
 }
 
 // renderTestPlanWithCheckboxes renders the interactive test plan with checkboxes

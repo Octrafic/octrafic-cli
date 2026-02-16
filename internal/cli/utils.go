@@ -279,6 +279,13 @@ func (m *TestUIModel) loadConversationHistory() error {
 		return nil
 	}
 
+	conv, err := storage.LoadConversation(m.currentProject.ID, m.conversationID)
+	if err != nil {
+		logger.Error("Failed to load conversation", zap.Error(err))
+		return err
+	}
+	m.conversationTitle = conv.Title
+
 	messages, err := storage.GetMessages(m.currentProject.ID, m.conversationID)
 	if err != nil {
 		logger.Error("Failed to load conversation messages", zap.Error(err))
