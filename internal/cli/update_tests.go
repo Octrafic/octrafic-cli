@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"github.com/Octrafic/octrafic-cli/internal/agents"
-	"github.com/Octrafic/octrafic-cli/internal/core/auth"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -168,16 +167,7 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 		body = b
 	}
 
-	originalAuth := m.authProvider
-	if !requiresAuth {
-		m.testExecutor.UpdateAuthProvider(&auth.NoAuth{})
-	}
-
-	result, err := m.testExecutor.ExecuteTest(method, endpoint, headers, body)
-
-	if !requiresAuth {
-		m.testExecutor.UpdateAuthProvider(originalAuth)
-	}
+	result, err := m.testExecutor.ExecuteTest(method, endpoint, headers, body, requiresAuth)
 
 	methodStyle, ok := m.methodStyles[method]
 	if !ok {

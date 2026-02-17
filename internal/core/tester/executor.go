@@ -39,7 +39,7 @@ func (e *Executor) UpdateAuthProvider(authProvider auth.AuthProvider) {
 	e.authProvider = authProvider
 }
 
-func (e *Executor) ExecuteTest(method, endpoint string, headers map[string]string, body any) (*TestResult, error) {
+func (e *Executor) ExecuteTest(method, endpoint string, headers map[string]string, body any, requiresAuth bool) (*TestResult, error) {
 	startTime := time.Now()
 
 	// Build full URL
@@ -70,8 +70,8 @@ func (e *Executor) ExecuteTest(method, endpoint string, headers map[string]strin
 		req.Header.Set(key, value)
 	}
 
-	// Apply authentication
-	if e.authProvider != nil {
+	// Apply authentication only when required
+	if requiresAuth && e.authProvider != nil {
 		if err := e.authProvider.Apply(req); err != nil {
 			return &TestResult{Error: fmt.Errorf("failed to apply auth: %w", err)}, err
 		}

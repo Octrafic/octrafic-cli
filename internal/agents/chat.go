@@ -209,7 +209,7 @@ Generate PDF report from test results. Call AFTER tests are executed.
 - User mentions endpoint (e.g., "users", "auth") → fetch details, show info OR generate tests
 - User says "test X" → fetch details, generate & run tests
 - User says "list endpoints" → show list from available endpoints (no tool call)
-- requires_auth=true → send auth header, requires_auth=false → no auth`, baseURL, endpointsInfo)
+- requires_auth=true → CLI adds auth header, requires_auth=false → no auth`, baseURL, endpointsInfo)
 }
 
 func (a *Agent) ChatStream(messages []ChatMessage, thinkingEnabled bool, callback ReasoningCallback, endpointsList ...string) (*ChatResponse, error) {

@@ -289,7 +289,12 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 				body = b
 			}
 
-			result, err := m.testExecutor.ExecuteTest(method, endpoint, headers, body)
+			requiresAuth := false
+			if ra, ok := toolCall.Arguments["requires_auth"].(bool); ok {
+				requiresAuth = ra
+			}
+
+			result, err := m.testExecutor.ExecuteTest(method, endpoint, headers, body, requiresAuth)
 
 			if err != nil {
 				return toolResultMsg{

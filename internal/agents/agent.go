@@ -143,7 +143,6 @@ Return a JSON object with tests array. Each test:
 {
   "method": "GET",
   "endpoint": "/users",
-  "headers": {"Authorization": "Bearer token"},
   "body": null,
   "requires_auth": true
 }

@@ -412,7 +412,7 @@ func parseGraphQLField(field string, queryType string) *Endpoint {
 	if parenIdx := strings.Index(field, "("); parenIdx != -1 {
 		name = strings.TrimSpace(field[:parenIdx])
 		closeIdx := strings.Index(field, ")")
-		if closeIdx != -1 {
+		if closeIdx != -1 && closeIdx > parenIdx {
 			args = field[parenIdx+1 : closeIdx]
 		}
 	} else if colonIdx := strings.Index(field, ":"); colonIdx != -1 {
