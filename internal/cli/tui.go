@@ -508,7 +508,7 @@ func (m TestUIModel) View() string {
 		if m.agentState == StateIdle && m.showClearHint {
 			bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Warning).Render("Press ESC again to clear"))
 		} else {
-			octraficDisplay := lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true).Render("Octrafic") + " " + lipgloss.NewStyle().Foreground(Theme.TextMuted).Render("v"+m.currentVersion)
+			octraficDisplay := lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true).Render("Octrafic")
 			bottomParts = append(bottomParts, octraficDisplay)
 			if m.modelName != "" {
 				modelName := m.modelName
