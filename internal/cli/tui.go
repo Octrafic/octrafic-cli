@@ -529,23 +529,31 @@ func (m TestUIModel) View() string {
 
 		if len(bottomParts) > 0 || updateNotification != "" {
 			contentWidth := m.width - 2
-			halfWidth := contentWidth / 2
-			if halfWidth < 20 {
-				halfWidth = 20
-			}
-
+			
 			leftText := ""
 			if len(bottomParts) > 0 {
 				leftText = strings.Join(bottomParts, " • ")
 			}
 
-			leftStyle := lipgloss.NewStyle().Width(halfWidth).Align(lipgloss.Left)
-			leftRendered := leftStyle.Render(m.helpStyle.Render(leftText))
+			var bottomContent string
+			if updateNotification == "" {
+				leftStyle := lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Left)
+				bottomContent = leftStyle.Render(m.helpStyle.Render(leftText))
+			} else {
+				halfWidth := contentWidth / 2
+				if halfWidth < 20 {
+					halfWidth = 20
+				}
 
-			rightStyle := lipgloss.NewStyle().Width(halfWidth).Align(lipgloss.Right)
-			rightRendered := rightStyle.Render(m.helpStyle.Render(updateNotification))
+				leftStyle := lipgloss.NewStyle().Width(halfWidth).Align(lipgloss.Left)
+				leftRendered := leftStyle.Render(m.helpStyle.Render(leftText))
 
-			bottomContent := lipgloss.JoinHorizontal(lipgloss.Top, leftRendered, rightRendered)
+				rightStyle := lipgloss.NewStyle().Width(halfWidth).Align(lipgloss.Right)
+				rightRendered := rightStyle.Render(m.helpStyle.Render(updateNotification))
+
+				bottomContent = lipgloss.JoinHorizontal(lipgloss.Top, leftRendered, rightRendered)
+			}
+
 			bottomLine := lipgloss.NewStyle().Padding(0, 1).Render(bottomContent)
 			s.WriteString(bottomLine + "\n")
 		}
