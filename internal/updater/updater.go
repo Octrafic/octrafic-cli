@@ -243,7 +243,7 @@ func cmdExists(cmd string) bool {
 
 func updateHomebrew() error {
 	fmt.Println("Updating via Homebrew...")
-	cmd := exec.Command("brew", "upgrade", "octrafic")
+	cmd := exec.Command("brew", "upgrade", "Octrafic/tap/octrafic")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
