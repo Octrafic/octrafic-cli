@@ -529,7 +529,7 @@ func (m TestUIModel) View() string {
 
 		if len(bottomParts) > 0 || updateNotification != "" {
 			contentWidth := m.width - 2
-			
+
 			leftText := ""
 			if len(bottomParts) > 0 {
 				leftText = strings.Join(bottomParts, " • ")
