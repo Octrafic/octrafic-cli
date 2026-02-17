@@ -20,7 +20,7 @@
   <a href="https://goreportcard.com/report/github.com/Octrafic/octrafic-cli"><img src="https://goreportcard.com/badge/github.com/Octrafic/octrafic-cli?style=flat-square" alt="Go Report Card"></a>
 </p>
 
-![Demo](./demo/demo.gif)
+![Demo](./demo/screenshot.png)
 
 ## Features
 
