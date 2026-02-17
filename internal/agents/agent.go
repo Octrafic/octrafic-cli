@@ -13,8 +13,7 @@ import (
 
 const (
 	// Spec processing constants
-	SpecPreviewLines = 30 // Number of lines to show in spec preview
-	MaxIterations    = 10 // Maximum iterations for spec processing
+	MaxIterations = 10 // Maximum iterations for spec processing
 )
 
 type Agent struct {
@@ -58,13 +57,6 @@ func extractJSONFromMarkdown(response string) string {
 		}
 	}
 	return strings.TrimSpace(response)
-}
-
-type ProcessSpecResult struct {
-	Done      bool
-	Endpoints []APIEndpoint
-	ToolCalls []ToolCall
-	Messages  []ChatMessage
 }
 
 func NewAgent(baseURL string) (*Agent, error) {
@@ -133,7 +125,30 @@ func NewAgent(baseURL string) (*Agent, error) {
 func (a *Agent) GenerateTestPlan(what, focus string) ([]Test, int64, error) {
 	prompt := BuildTestPlanPrompt(what, focus)
 
-	systemPrompt := "Role: Test case generator. Rules: Create minimal tests matching user request. Return pure JSON only - no markdown, no comments."
+	systemPrompt := `# Purpose
+Generate API test cases from user request.
+
+# Constraints
+- Maximum 10 test cases per request
+- Each test must include: method, endpoint, headers (optional), body (optional), requires_auth
+- Always use provided endpoint details for accurate testing
+
+# Available Context
+HTTP methods: GET, POST, PUT, DELETE, PATCH
+Authentication: Bearer token (JWT), Basic auth, API Key header
+Test focus options: "happy path", "authentication", "error handling", "all aspects"
+
+# Output Format
+Return a JSON object with tests array. Each test:
+{
+  "method": "GET",
+  "endpoint": "/users",
+  "headers": {"Authorization": "Bearer token"},
+  "body": null,
+  "requires_auth": true
+}
+
+Return pure JSON only - no markdown, no comments.`
 	messages := []ChatMessage{
 		{Role: "user", Content: prompt},
 	}
@@ -162,187 +177,6 @@ func (a *Agent) GenerateTestPlan(what, focus string) ([]Test, int64, error) {
 	}
 
 	return tests, response.TokensUsed, nil
-}
-
-func (a *Agent) ProcessSpecificationIterative(rawContent string, baseURL string, messages []ChatMessage, toolResults []map[string]interface{}) (*ProcessSpecResult, error) {
-	if len(messages) == 0 {
-		lines := strings.Split(rawContent, "\n")
-		previewLines := SpecPreviewLines
-		if len(lines) < previewLines {
-			previewLines = len(lines)
-		}
-
-		preview := strings.Join(lines[:previewLines], "\n") + "\n\n... [CONTENT TRUNCATED - Use SearchSpec to see more] ..."
-		totalLines := len(lines)
-
-		prompt := fmt.Sprintf(`Role: API specification analyst
-Goal: Extract ALL endpoints with complete metadata
-
-Base URL: %s
-Spec: %d lines total, %d lines visible
-
-SPEC PREVIEW:
-%s
-
-%s
-
-# Required Fields
-Extract for each endpoint:
-- method (GET, POST, PUT, DELETE, PATCH)
-- path (e.g., "/users", "/api/health")
-- description (brief, clear)
-- requires_auth (boolean)
-- auth_type ("bearer" | "apikey" | "basic" | "none")
-
-# Auth Detection
-
-Priority 1 - Security field:
-- Present + non-empty → requires_auth=true
-- Empty array [] → requires_auth=false
-- Missing → use fallback
-
-Priority 2 - Fallback heuristics:
-TRUE: POST/PUT/DELETE, paths: /users /auth /admin /account /api-keys
-FALSE: Public GET, /health /status /ping, public docs
-
-auth_type:
-- bearer (most common, JWT)
-- apikey (X-API-Key header)
-- basic (HTTP Basic)
-- none (when requires_auth=false)
-
-# Search Strategy
-
-The spec is indexed - use SearchSpec tool:
-1. Search HTTP methods: "GET", "POST", "PUT", "DELETE", "PATCH"
-2. Search keywords: "users", "auth", "login", "create", "update"
-3. Search terms: "api", "endpoint", "path", "route"
-4. Continue until no new results
-
-# Output Format
-
-JSON array, sorted by path then method:
-[
-  {"method":"GET","path":"/health","description":"Health check","requires_auth":false,"auth_type":"none"},
-  {"method":"GET","path":"/users","description":"List users","requires_auth":true,"auth_type":"bearer"}
-]
-
-START by using SearchSpec tool to find all endpoints!`,
-			baseURL,
-			totalLines,
-			previewLines,
-			preview,
-			func() string {
-				if totalLines > previewLines {
-					remaining := totalLines - previewLines
-					return fmt.Sprintf("⚠️ Only %d lines visible. %d MORE lines to search!", previewLines, remaining)
-				}
-				return ""
-			}(),
-		)
-
-		messages = []ChatMessage{
-			{Role: "system", Content: "Role: API specification analyst. Goal: Extract ALL endpoints accurately with complete metadata. Use SearchSpec tool to explore large specifications efficiently."},
-			{Role: "user", Content: prompt},
-		}
-	}
-
-	if len(toolResults) > 0 {
-		var toolCallIDs []string
-		for i := len(messages) - 1; i >= 0; i-- {
-			if len(messages[i].FunctionCalls) > 0 {
-				for _, fc := range messages[i].FunctionCalls {
-					toolCallIDs = append(toolCallIDs, fc.ID)
-				}
-				break
-			}
-		}
-
-		for i, result := range toolResults {
-			toolID := "unknown"
-			if i < len(toolCallIDs) {
-				toolID = toolCallIDs[i]
-			}
-			messages = append(messages, ChatMessage{
-				Role: "user",
-				FunctionResponse: &FunctionResponseData{
-					ID:       toolID, // tool_use_id from original tool use block
-					Name:     "SearchSpec",
-					Response: result,
-				},
-			})
-		}
-	}
-
-	tools := []common.Tool{
-		{
-			Name:        "SearchSpec",
-			Description: "Search the API specification using full-text search to find endpoints, methods, parameters, or other information. The index contains parsed endpoint data with methods, paths, descriptions, parameters, and more.",
-			InputSchema: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"query": map[string]interface{}{
-						"type":        "string",
-						"description": "Search query - can be keywords, endpoint paths, HTTP methods, or natural language (e.g., 'users', 'authentication', 'POST /login', 'create user endpoint')",
-					},
-				},
-				"required": []string{"query"},
-			},
-		},
-	}
-
-	systemPrompt := "Role: API specification analyst. Goal: Extract ALL endpoints accurately with complete metadata. Use SearchSpec tool to explore large specifications efficiently."
-
-	chatResponse, err := a.baseAgent.Chat(systemPrompt, tools, messages, false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to process specification: %w", err)
-	}
-
-	if len(chatResponse.ToolCalls) > 0 {
-		var toolCalls []ToolCall
-		var functionCallsData []ToolCall
-
-		for _, fc := range chatResponse.ToolCalls {
-			toolCalls = append(toolCalls, ToolCall{
-				ID:        fc.ID,
-				Name:      fc.Name,
-				Arguments: fc.Arguments,
-			})
-			functionCallsData = append(functionCallsData, ToolCall{
-				ID:        fc.ID,
-				Name:      fc.Name,
-				Arguments: fc.Arguments,
-			})
-		}
-
-		messages = append(messages, ChatMessage{
-			Role:          "model",
-			Content:       chatResponse.Message,
-			FunctionCalls: functionCallsData,
-		})
-
-		return &ProcessSpecResult{
-			Done:      false,
-			ToolCalls: toolCalls,
-			Messages:  messages,
-		}, nil
-	}
-
-	jsonResponse := extractJSONFromMarkdown(chatResponse.Message)
-
-	var endpoints []APIEndpoint
-	if err := json.Unmarshal([]byte(jsonResponse), &endpoints); err != nil {
-		logger.Error("Failed to parse endpoints",
-			logger.Err(err),
-			logger.String("raw_response", chatResponse.Message))
-		return nil, fmt.Errorf("failed to parse endpoints: %w", err)
-	}
-
-	return &ProcessSpecResult{
-		Done:      true,
-		Endpoints: endpoints,
-		Messages:  messages,
-	}, nil
 }
 
 func (a *Agent) ProcessSpecification(rawContent string, baseURL string) ([]APIEndpoint, error) {
@@ -390,7 +224,34 @@ Requirements:
 		rawContent,
 	)
 
-	systemPrompt := "Role: API analyst. Rules: Extract endpoints accurately. Return JSONL (one JSON object per line)."
+	systemPrompt := `# Purpose
+Extract ALL API endpoints from specification in a single pass.
+
+# Constraints
+- Process entire specification at once
+- No duplicate (method, path) pairs
+- Auth detection priority: security field > path/method heuristics
+
+# Available Context
+HTTP methods: GET, POST, PUT, DELETE, PATCH
+Auth types: "bearer" (JWT), "apikey" (X-API-Key), "basic" (HTTP Basic), "none" (public)
+Required fields per endpoint: method, path, description, requires_auth, auth_type
+
+Auth detection rules:
+- Security field present + non-empty → requires_auth=true
+- Security field empty array [] → requires_auth=false
+- Fallback: POST/PUT/DELETE/PATCH, /users /auth /admin /account → auth required
+- Fallback: GET /health /status /ping /version → public
+
+# Output Format
+JSONL - one JSON object per line, no array brackets:
+{"method":"GET","path":"/users","description":"List users","requires_auth":true,"auth_type":"bearer"}
+{"method":"POST","path":"/users","description":"Create user","requires_auth":true,"auth_type":"bearer"}
+
+Requirements:
+- One object per line
+- No markdown, no comments
+- Pure JSON objects only`
 	messages := []ChatMessage{
 		{Role: "user", Content: prompt},
 	}
