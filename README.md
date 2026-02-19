@@ -1,3 +1,5 @@
+![Banner](./assets/banner.png)
+
 <p align="center">
   <img src="https://octrafic.com/octrafic-logo.png" alt="Octrafic" width="120" />
 </p>
@@ -20,7 +22,7 @@
   <a href="https://goreportcard.com/report/github.com/Octrafic/octrafic-cli"><img src="https://goreportcard.com/badge/github.com/Octrafic/octrafic-cli?style=flat-square" alt="Go Report Card"></a>
 </p>
 
-![Demo](./demo/demo.gif)
+![Demo](./assets/demo.gif)
 
 ## Features
 
