@@ -1,9 +1,7 @@
 ![Banner](./assets/banner.png)
 
-<p align="center">
-  AI-powered CLI tool for API testing and exploration.<br/>
-  Chat naturally with your APIs - no scripts, no configuration files, just conversation.
-</p>
+AI-powered CLI tool for API testing and exploration.
+Chat naturally with your APIs - no scripts, no configuration files, just conversation.
 
 <p align="center">
   <a href="https://docs.octrafic.com"><strong>Documentation</strong></a>
