@@ -26,7 +26,7 @@ type releaseNotesMsg struct {
 }
 
 // Update handles all incoming messages and updates the model state.
-func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
@@ -50,10 +50,13 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case streamDoneMsg:
 		m.agentState = StateIdle
+		if m.isHeadless {
+			return m, tea.Quit
+		}
 		return m, nil
 
 	case reasoningChunkMsg:
-		return handleStreamingMsg(&m, msg)
+		return handleStreamingMsg(m, msg)
 
 	case agentResponseMsg:
 		m.agentState = StateIdle
@@ -62,6 +65,10 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addMessage("")
 			m.addMessage(m.errorStyle.Render("Error - " + msg.err.Error()))
 			m.addMessage("")
+
+			if m.isHeadless {
+				return m, tea.Quit
+			}
 		} else {
 			rendered := renderMarkdown(msg.message)
 			m.addMessage(rendered)
@@ -96,6 +103,10 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 			}
+
+			if m.isHeadless {
+				return m, tea.Quit
+			}
 		}
 
 	case toolResultMsg:
@@ -118,6 +129,9 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nextCmd
 			}
 			m.agentState = StateIdle
+			if m.isHeadless {
+				return m, tea.Quit
+			}
 		}
 
 	case releaseNotesMsg:
@@ -151,13 +165,13 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		if newM, cmd, handled := handleGlobalKeyboard(&m, msg); handled {
-			return *newM, cmd
+		if newM, cmd, handled := handleGlobalKeyboard(m, msg); handled {
+			return newM, cmd
 		}
 
 		// Handle file picker specific keys first
 		if m.showFilePicker {
-			if newM, cmd, handled := handleFilePickerState(&m, msg); handled {
+			if newM, cmd, handled := handleFilePickerState(m, msg); handled {
 				// After handling, verify state (did user delete '@' with backspace?)
 				// Actually backspace is handled in handleFilePickerState.
 				// But we should check if we should still show it.
@@ -166,11 +180,11 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if m.agentState == StateShowingTestPlan {
-			return handleTestPlanState(&m, msg)
+			return handleTestPlanState(m, msg)
 		}
 
 		if m.agentState == StateAskingConfirmation {
-			return handleConfirmationState(&m, msg)
+			return handleConfirmationState(m, msg)
 		}
 
 		if m.agentState == StateWizard {
@@ -178,11 +192,11 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if m.agentState == StateModelSelector {
-			return handleModelSelectorState(&m, msg)
+			return handleModelSelectorState(m, msg)
 		}
 
 		if m.agentState == StateShowingCommands {
-			return handleCommandsState(&m, msg)
+			return handleCommandsState(m, msg)
 		}
 
 		if m.agentState == StateIdle {
@@ -225,12 +239,12 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.textarea.SetHeight(1)
 					m.showClearHint = false
 
-					if newM, cmd, handled := handleSlashCommands(&m, userInput); handled {
-						return *newM, cmd
+					if newM, cmd, handled := handleSlashCommands(m, userInput); handled {
+						return newM, cmd
 					}
 
-					if newM, cmd, handled := handleAuthCommand(&m, userInput); handled {
-						return *newM, cmd
+					if newM, cmd, handled := handleAuthCommand(m, userInput); handled {
+						return newM, cmd
 					}
 
 					if m.conversationID != "" && !m.isLoadedConversation && m.currentProject != nil && !m.currentProject.IsTemporary {
@@ -390,13 +404,13 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case generateTestPlanResultMsg:
-		return handleGenerateTestPlanResult(&m, msg)
+		return handleGenerateTestPlanResult(m, msg)
 
 	case showTestSelectionMsg:
-		return handleShowTestSelection(&m, msg)
+		return handleShowTestSelection(m, msg)
 
 	case processToolCallsMsg:
-		return handleProcessToolCalls(&m, msg)
+		return handleProcessToolCalls(m, msg)
 
 	case animationTickMsg:
 		if m.agentState == StateThinking || m.agentState == StateUsingTool || m.agentState == StateProcessing || m.agentState == StateRunningTests {
@@ -405,10 +419,10 @@ func (m TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case startTestGroupMsg:
-		return handleStartTestGroup(&m, msg)
+		return handleStartTestGroup(m, msg)
 
 	case runNextTestMsg:
-		return handleRunNextTest(&m, msg)
+		return handleRunNextTest(m, msg)
 
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -527,6 +541,11 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		}
 
 		m.agentState = StateIdle
+		if m.isHeadless {
+			logger.Debug("Exiting headless mode. Triggering tea.Quit()")
+			return m, tea.Quit
+		}
+		logger.Debug("Not headless. Staying in UI.")
 		return m, nil
 	} else if strings.HasPrefix(msg.chunk, "\x00TOOLS:") {
 		toolCallsJSON := strings.TrimPrefix(msg.chunk, "\x00TOOLS:")
@@ -830,6 +849,24 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 			}
 		}
 		m.addMessage(m.subtleStyle.Render(fmt.Sprintf("  Created: %s", m.currentProject.CreatedAt.Format("2006-01-02 15:04"))))
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+
+	case "/auto":
+		m.addMessage("")
+		m.addMessage(renderUserLabel() + " " + userInput)
+		m.addMessage("")
+		m.lastMessageRole = "user"
+
+		if m.executionMode == ModeAutoExecute {
+			m.executionMode = ModeAsk
+			m.addMessage(m.successStyle.Render("✓ Auto mode disabled"))
+			m.addMessage(m.subtleStyle.Render("Tests will now require confirmation"))
+		} else {
+			m.executionMode = ModeAutoExecute
+			m.addMessage(lipgloss.NewStyle().Foreground(Theme.Warning).Bold(true).Render("! Auto mode enabled"))
+			m.addMessage(m.subtleStyle.Render("Tests will run automatically without confirmation"))
+		}
 		m.lastMessageRole = "assistant"
 		return m, nil, true
 	}
@@ -1278,6 +1315,9 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 	}
 
 	m.agentState = StateIdle
+	if m.isHeadless {
+		return m, tea.Quit
+	}
 	return m, nil
 }
 
@@ -1318,6 +1358,49 @@ func handleShowTestSelection(m *TestUIModel, msg showTestSelectionMsg) (tea.Mode
 	}
 
 	m.pendingTestGroupToolCall = &msg.toolCall
+
+	if m.executionMode == ModeAutoExecute || m.isHeadless {
+		m.addMessage("")
+
+		tests := make([]map[string]any, 0)
+		for _, test := range m.tests {
+			tests = append(tests, map[string]any{
+				"method":        test.Method,
+				"endpoint":      test.Endpoint,
+				"headers":       test.BackendTest.Headers,
+				"body":          test.BackendTest.Body,
+				"requires_auth": test.BackendTest.RequiresAuth,
+			})
+		}
+
+		label := "Running tests"
+		if len(tests) > 0 {
+			label = fmt.Sprintf("Testing %s %s", tests[0]["method"], tests[0]["endpoint"])
+			if len(tests) > 1 {
+				label = fmt.Sprintf("Testing %d endpoints", len(tests))
+			}
+		}
+
+		toolID := ""
+		toolName := "ExecuteTestGroup"
+		if m.pendingTestGroupToolCall != nil {
+			toolID = m.pendingTestGroupToolCall.ID
+			toolName = m.pendingTestGroupToolCall.Name
+		}
+		m.pendingTestGroupToolCall = nil
+
+		m.agentState = StateUsingTool
+		m.animationFrame = 0
+		m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.PrimaryDark)
+		return m, tea.Batch(animationTick(), func() tea.Msg {
+			return startTestGroupMsg{
+				tests:    tests,
+				label:    label,
+				toolName: toolName,
+				toolID:   toolID,
+			}
+		})
+	}
 
 	m.selectedTestIndex = 0
 	m.agentState = StateShowingTestPlan

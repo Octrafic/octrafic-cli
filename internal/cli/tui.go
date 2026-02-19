@@ -56,6 +56,7 @@ var availableCommands = []Command{
 	{Name: "/info", Description: "Show current project info"},
 	{Name: "/save", Description: "Save temp project with a name"},
 	{Name: "/release-notes", Description: "Show latest release notes"},
+	{Name: "/auto", Description: "Toggle Auto-execute mode"},
 }
 
 type Test struct {
@@ -216,9 +217,12 @@ type TestUIModel struct {
 	filteredFiles     []string
 	selectedFileIndex int
 	fileFilterText    string
+
+	isHeadless    bool
+	initialPrompt string
 }
 
-func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis, authProvider auth.AuthProvider, version string) *TestUIModel {
+func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis, authProvider auth.AuthProvider, version string, autoMode bool, isHeadless bool) *TestUIModel {
 	// Textarea
 	ta := textarea.New()
 	ta.Placeholder = "Chat with the testing agent..."
@@ -271,6 +275,11 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 		"PATCH":  lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true),     // light blue
 	}
 
+	execMode := ModeAsk
+	if autoMode {
+		execMode = ModeAutoExecute
+	}
+
 	model := &TestUIModel{
 		analysis:            analysis,
 		baseURL:             baseURL,
@@ -279,7 +288,7 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 		testExecutor:        tester.NewExecutor(baseURL, authProvider),
 		authProvider:        authProvider,
 		agentState:          StateIdle,
-		executionMode:       ModeAsk,
+		executionMode:       execMode,
 		lastMessageRole:     "", // Empty = no messages yet, so first message will show label
 		conversationHistory: []agent.ChatMessage{},
 		viewport:            vp,
@@ -301,6 +310,7 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 		agentStyle:          lipgloss.NewStyle().Foreground(Theme.Primary),
 		toolStyle:           lipgloss.NewStyle().Foreground(Theme.Warning),
 		borderStyle:         lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(Theme.Primary).Padding(0, 1),
+		isHeadless:          isHeadless,
 	}
 
 	model.currentVersion = version
@@ -326,12 +336,22 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 }
 
 // Init initializes the model
-func (m TestUIModel) Init() tea.Cmd {
+func (m *TestUIModel) Init() tea.Cmd {
 	title := "Octrafic"
 	if m.conversationTitle != "" {
 		title = m.conversationTitle + " - Octrafic"
 	}
-	return tea.Batch(textarea.Blink, m.spinner.Tick, tea.SetWindowTitle(title))
+	
+	cmds := []tea.Cmd{textarea.Blink, m.spinner.Tick, tea.SetWindowTitle(title)}
+
+	if m.initialPrompt != "" {
+		submitCmd := func() tea.Msg {
+			return tea.KeyMsg{Type: tea.KeyEnter}
+		}
+		cmds = append(cmds, submitCmd)
+	}
+
+	return tea.Batch(cmds...)
 }
 
 // renderTestPlanWithCheckboxes renders the interactive test plan with checkboxes
@@ -382,7 +402,7 @@ func renderTestPlanWithCheckboxes(m *TestUIModel) string {
 }
 
 // View renders the UI
-func (m TestUIModel) View() string {
+func (m *TestUIModel) View() string {
 	var s strings.Builder
 
 	s.WriteString(m.viewport.View() + "\n")
@@ -405,7 +425,7 @@ func (m TestUIModel) View() string {
 
 	// Show test plan with checkboxes
 	if m.agentState == StateShowingTestPlan {
-		s.WriteString(renderTestPlanWithCheckboxes(&m))
+		s.WriteString(renderTestPlanWithCheckboxes(m))
 		s.WriteString("\n")
 		return s.String()
 	}
@@ -516,6 +536,9 @@ func (m TestUIModel) View() string {
 				} else if m.currentProject.Name != "" {
 					bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Primary).Render(m.currentProject.Name))
 				}
+			}
+			if m.executionMode == ModeAutoExecute {
+				bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Warning).Bold(true).Render("[Auto]"))
 			}
 			if m.modelName != "" {
 				modelName := m.modelName
