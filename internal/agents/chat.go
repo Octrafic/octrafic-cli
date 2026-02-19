@@ -155,22 +155,33 @@ func getMainAgentTools() []common.Tool {
 		},
 		{
 			Name:        "ExportTests",
-			Description: "Export executed API tests to a file in the specified format. Call this ONLY when the user explicitly requests to save/export tests. Do NOT call this automatically after test execution.",
+			Description: "Export executed API tests to files in the specified formats. Call this ONLY when the user explicitly requests to save/export tests. Do NOT call this automatically after test execution. Can export to multiple formats at once.",
 			InputSchema: map[string]any{
 				"type":                 "object",
 				"additionalProperties": false,
 				"properties": map[string]any{
-					"format": map[string]any{
-						"type":        "string",
-						"enum":        []string{"postman", "pytest", "sh"},
-						"description": "Export format: 'postman' for Postman Collection v2.1 (JSON), 'pytest' for Python tests (.py), 'sh' for bash script with curl commands",
-					},
-					"filepath": map[string]any{
-						"type":        "string",
-						"description": "Output file path (e.g., 'tests.json', 'test_api.py', 'api-tests.sh'). Can be relative or absolute. Parent directories will be created automatically.",
+					"exports": map[string]any{
+						"type": "array",
+						"items": map[string]any{
+							"type":                 "object",
+							"additionalProperties": false,
+							"properties": map[string]any{
+								"format": map[string]any{
+									"type":        "string",
+									"enum":        []string{"postman", "pytest", "sh"},
+									"description": "Export format: 'postman' for Postman Collection v2.1 (JSON), 'pytest' for Python tests (.py), 'sh' for bash script with curl commands",
+								},
+								"filepath": map[string]any{
+									"type":        "string",
+									"description": "Output file path (e.g., 'tests.json', 'test_api.py', 'api-tests.sh'). Can be relative or absolute.",
+								},
+							},
+							"required": []string{"format", "filepath"},
+						},
+						"description": "List of export configurations. Each entry specifies a format and output filepath.",
 					},
 				},
-				"required": []string{"format", "filepath"},
+				"required": []string{"exports"},
 			},
 		},
 	}

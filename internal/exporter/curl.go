@@ -49,17 +49,18 @@ func (e *CurlExporter) buildCurlCommand(test TestData, req ExportRequest) string
 	}
 
 	if test.RequiresAuth && req.AuthType != "" {
-		if req.AuthType == "bearer" {
+		switch req.AuthType {
+		case "bearer":
 			if token, ok := req.AuthData["token"]; ok {
 				parts = append(parts, fmt.Sprintf("-H 'Authorization: Bearer %s'", token))
 			}
-		} else if req.AuthType == "apikey" {
+		case "apikey":
 			if keyName, ok := req.AuthData["key_name"]; ok {
 				if keyValue, ok := req.AuthData["key_value"]; ok {
 					parts = append(parts, fmt.Sprintf("-H '%s: %s'", keyName, keyValue))
 				}
 			}
-		} else if req.AuthType == "basic" {
+		case "basic":
 			if username, ok := req.AuthData["username"]; ok {
 				if password, ok := req.AuthData["password"]; ok {
 					parts = append(parts, fmt.Sprintf("-u '%s:%s'", username, password))

@@ -591,9 +591,8 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 
 	if toolName == "ExportTests" {
 		if resultMap, ok := result.(map[string]any); ok {
-			filePath, _ := resultMap["filepath"].(string)
-			format, _ := resultMap["format"].(string)
 			testCount, _ := resultMap["test_count"].(int)
+			exports, _ := resultMap["exports"].([]map[string]any)
 
 			formatLabel := map[string]string{
 				"postman": "Postman Collection",
@@ -601,16 +600,22 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 				"sh":      "curl script",
 			}
 
-			formatName := formatLabel[format]
-			if formatName == "" {
-				formatName = format
-			}
-
 			m.addMessage("")
 			m.addMessage(m.successStyle.Render("✓ Tests exported"))
-			m.addMessage(m.subtleStyle.Render(fmt.Sprintf("   Format: %s", formatName)))
 			m.addMessage(m.subtleStyle.Render(fmt.Sprintf("   Tests: %d", testCount)))
-			m.addMessage(m.subtleStyle.Render(fmt.Sprintf("   File: %s", filePath)))
+			m.addMessage("")
+
+			for _, exportItem := range exports {
+				format, _ := exportItem["format"].(string)
+				filePath, _ := exportItem["filepath"].(string)
+
+				formatName := formatLabel[format]
+				if formatName == "" {
+					formatName = format
+				}
+
+				m.addMessage(m.subtleStyle.Render(fmt.Sprintf("   • %s: %s", formatName, filePath)))
+			}
 
 			if toolID != "" {
 				chatMsg := agent.ChatMessage{
@@ -665,26 +670,33 @@ func (m *TestUIModel) loadProjectEndpoints() ([]parser.Endpoint, error) {
 }
 
 func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
-	format, ok := toolCall.Arguments["format"].(string)
+	exportsArg, ok := toolCall.Arguments["exports"]
 	if !ok {
 		return toolResultMsg{
 			toolID:   toolCall.ID,
 			toolName: toolCall.Name,
-			err:      fmt.Errorf("missing or invalid 'format' parameter"),
+			err:      fmt.Errorf("missing 'exports' parameter"),
 		}
 	}
 
-	outputPath, ok := toolCall.Arguments["filepath"].(string)
+	exportsSlice, ok := exportsArg.([]any)
 	if !ok {
 		return toolResultMsg{
 			toolID:   toolCall.ID,
 			toolName: toolCall.Name,
-			err:      fmt.Errorf("missing or invalid 'filepath' parameter"),
+			err:      fmt.Errorf("'exports' must be an array"),
+		}
+	}
+
+	if len(exportsSlice) == 0 {
+		return toolResultMsg{
+			toolID:   toolCall.ID,
+			toolName: toolCall.Name,
+			err:      fmt.Errorf("'exports' array cannot be empty"),
 		}
 	}
 
 	var tests []exporter.TestData
-
 	if len(m.testGroupResults) > 0 {
 		tests = make([]exporter.TestData, 0, len(m.testGroupResults))
 		for _, result := range m.testGroupResults {
@@ -705,7 +717,6 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 				RequiresAuth: requiresAuth,
 				Error:        errStr,
 			}
-
 			tests = append(tests, testData)
 		}
 	} else if len(m.tests) > 0 {
@@ -715,13 +726,11 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 			if test.BackendTest != nil {
 				requiresAuth = test.BackendTest.RequiresAuth
 			}
-
 			testData := exporter.TestData{
 				Method:       test.Method,
 				Endpoint:     test.Endpoint,
 				RequiresAuth: requiresAuth,
 			}
-
 			tests = append(tests, testData)
 		}
 	} else {
@@ -743,29 +752,49 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 		authData["password"] = m.currentProject.AuthConfig.Password
 	}
 
-	resolvedPath, err := exporter.ResolveExportPath(outputPath)
-	if err != nil {
-		return toolResultMsg{
-			toolID:   toolCall.ID,
-			toolName: toolCall.Name,
-			err:      fmt.Errorf("failed to resolve path: %w", err),
+	var exportResults []map[string]any
+	for _, exportItem := range exportsSlice {
+		exportMap, ok := exportItem.(map[string]any)
+		if !ok {
+			continue
 		}
-	}
 
-	req := exporter.ExportRequest{
-		BaseURL:  m.baseURL,
-		Tests:    tests,
-		FilePath: resolvedPath,
-		AuthType: authType,
-		AuthData: authData,
-	}
+		format, _ := exportMap["format"].(string)
+		outputPath, _ := exportMap["filepath"].(string)
 
-	if err := exporter.Export(format, req); err != nil {
-		return toolResultMsg{
-			toolID:   toolCall.ID,
-			toolName: toolCall.Name,
-			err:      fmt.Errorf("export failed: %w", err),
+		if format == "" || outputPath == "" {
+			continue
 		}
+
+		resolvedPath, err := exporter.ResolveExportPath(outputPath)
+		if err != nil {
+			return toolResultMsg{
+				toolID:   toolCall.ID,
+				toolName: toolCall.Name,
+				err:      fmt.Errorf("failed to resolve path %s: %w", outputPath, err),
+			}
+		}
+
+		req := exporter.ExportRequest{
+			BaseURL:  m.baseURL,
+			Tests:    tests,
+			FilePath: resolvedPath,
+			AuthType: authType,
+			AuthData: authData,
+		}
+
+		if err := exporter.Export(format, req); err != nil {
+			return toolResultMsg{
+				toolID:   toolCall.ID,
+				toolName: toolCall.Name,
+				err:      fmt.Errorf("export to %s failed: %w", format, err),
+			}
+		}
+
+		exportResults = append(exportResults, map[string]any{
+			"format":   format,
+			"filepath": resolvedPath,
+		})
 	}
 
 	return toolResultMsg{
@@ -773,8 +802,7 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 		toolName: toolCall.Name,
 		result: map[string]any{
 			"success":    true,
-			"filepath":   resolvedPath,
-			"format":     format,
+			"exports":    exportResults,
 			"test_count": len(tests),
 		},
 	}

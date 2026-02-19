@@ -21,18 +21,19 @@ func (e *PytestExporter) Export(req ExportRequest) error {
 
 	if req.AuthType != "" {
 		script.WriteString("# Authentication configuration\n")
-		if req.AuthType == "bearer" {
+		switch req.AuthType {
+		case "bearer":
 			if token, ok := req.AuthData["token"]; ok {
 				script.WriteString(fmt.Sprintf("AUTH_TOKEN = \"%s\"\n", token))
 			}
-		} else if req.AuthType == "apikey" {
+		case "apikey":
 			if keyName, ok := req.AuthData["key_name"]; ok {
 				if keyValue, ok := req.AuthData["key_value"]; ok {
 					script.WriteString(fmt.Sprintf("API_KEY_NAME = \"%s\"\n", keyName))
 					script.WriteString(fmt.Sprintf("API_KEY_VALUE = \"%s\"\n", keyValue))
 				}
 			}
-		} else if req.AuthType == "basic" {
+		case "basic":
 			if username, ok := req.AuthData["username"]; ok {
 				if password, ok := req.AuthData["password"]; ok {
 					script.WriteString(fmt.Sprintf("AUTH_USER = \"%s\"\n", username))
@@ -56,9 +57,10 @@ func (e *PytestExporter) Export(req ExportRequest) error {
 		script.WriteString("}\n")
 
 		if test.RequiresAuth && req.AuthType != "" {
-			if req.AuthType == "bearer" {
+			switch req.AuthType {
+			case "bearer":
 				script.WriteString("    headers[\"Authorization\"] = f\"Bearer {AUTH_TOKEN}\"\n")
-			} else if req.AuthType == "apikey" {
+			case "apikey":
 				script.WriteString("    headers[API_KEY_NAME] = API_KEY_VALUE\n")
 			}
 		}

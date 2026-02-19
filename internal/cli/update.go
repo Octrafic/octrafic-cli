@@ -1247,16 +1247,9 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 				m.currentTestToolID = toolCall.ID
 				m.currentTestToolName = "ExportTests"
 
-				format, _ := toolCall.Arguments["format"].(string)
-				formatLabel := map[string]string{
-					"postman": "Postman Collection",
-					"pytest":  "pytest tests",
-					"sh":      "curl script",
-				}
-				label := formatLabel[format]
-				if label == "" {
-					label = format
-				}
+				exportsArg, _ := toolCall.Arguments["exports"].([]any)
+				formatCount := len(exportsArg)
+				label := fmt.Sprintf("%d format(s)", formatCount)
 
 				showToolWidget(m, "Exporting tests", label)
 				m.agentState = StateUsingTool
