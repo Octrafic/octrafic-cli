@@ -682,35 +682,53 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 		}
 	}
 
-	if len(m.testGroupResults) == 0 {
+	var tests []exporter.TestData
+
+	if len(m.testGroupResults) > 0 {
+		tests = make([]exporter.TestData, 0, len(m.testGroupResults))
+		for _, result := range m.testGroupResults {
+			method, _ := result["method"].(string)
+			endpoint, _ := result["endpoint"].(string)
+			statusCode, _ := result["status_code"].(int)
+			responseBody, _ := result["response_body"].(string)
+			durationMS, _ := result["duration_ms"].(int64)
+			requiresAuth, _ := result["requires_auth"].(bool)
+			errStr, _ := result["error"].(string)
+
+			testData := exporter.TestData{
+				Method:       method,
+				Endpoint:     endpoint,
+				StatusCode:   statusCode,
+				ResponseBody: responseBody,
+				DurationMS:   durationMS,
+				RequiresAuth: requiresAuth,
+				Error:        errStr,
+			}
+
+			tests = append(tests, testData)
+		}
+	} else if len(m.tests) > 0 {
+		tests = make([]exporter.TestData, 0, len(m.tests))
+		for _, test := range m.tests {
+			requiresAuth := false
+			if test.BackendTest != nil {
+				requiresAuth = test.BackendTest.RequiresAuth
+			}
+
+			testData := exporter.TestData{
+				Method:       test.Method,
+				Endpoint:     test.Endpoint,
+				RequiresAuth: requiresAuth,
+			}
+
+			tests = append(tests, testData)
+		}
+	} else {
 		return toolResultMsg{
 			toolID:   toolCall.ID,
 			toolName: toolCall.Name,
-			err:      fmt.Errorf("no test results available to export. Run tests first using ExecuteTestGroup"),
+			err:      fmt.Errorf("no tests available to export. Generate test plan first using GenerateTestPlan"),
 		}
-	}
-
-	tests := make([]exporter.TestData, 0, len(m.testGroupResults))
-	for _, result := range m.testGroupResults {
-		method, _ := result["method"].(string)
-		endpoint, _ := result["endpoint"].(string)
-		statusCode, _ := result["status_code"].(int)
-		responseBody, _ := result["response_body"].(string)
-		durationMS, _ := result["duration_ms"].(int64)
-		requiresAuth, _ := result["requires_auth"].(bool)
-		errStr, _ := result["error"].(string)
-
-		testData := exporter.TestData{
-			Method:       method,
-			Endpoint:     endpoint,
-			StatusCode:   statusCode,
-			ResponseBody: responseBody,
-			DurationMS:   durationMS,
-			RequiresAuth: requiresAuth,
-			Error:        errStr,
-		}
-
-		tests = append(tests, testData)
 	}
 
 	authType := ""
