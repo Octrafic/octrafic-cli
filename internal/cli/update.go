@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -683,7 +684,11 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 
 		m.currentProject = updatedProject
 
-		if m.conversationID != "" && len(m.conversationHistory) > 0 {
+		if m.conversationID == "" {
+			m.conversationID = uuid.New().String()
+		}
+
+		if len(m.conversationHistory) > 0 {
 			title := newName
 			if _, err := storage.CreateConversation(updatedProject.ID, m.conversationID, title); err == nil {
 				m.conversationTitle = title
