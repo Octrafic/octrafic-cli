@@ -690,11 +690,6 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 		}
 	}
 
-	absPath, err := filepath.Abs(outputPath)
-	if err != nil {
-		absPath = outputPath
-	}
-
 	tests := make([]exporter.TestData, 0, len(m.testGroupResults))
 	for _, result := range m.testGroupResults {
 		method, _ := result["method"].(string)
@@ -729,10 +724,19 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 		authData["password"] = m.currentProject.AuthConfig.Password
 	}
 
+	resolvedPath, err := exporter.ResolveExportPath(outputPath)
+	if err != nil {
+		return toolResultMsg{
+			toolID:   toolCall.ID,
+			toolName: toolCall.Name,
+			err:      fmt.Errorf("failed to resolve path: %w", err),
+		}
+	}
+
 	req := exporter.ExportRequest{
 		BaseURL:  m.baseURL,
 		Tests:    tests,
-		FilePath: absPath,
+		FilePath: resolvedPath,
 		AuthType: authType,
 		AuthData: authData,
 	}
@@ -750,7 +754,7 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 		toolName: toolCall.Name,
 		result: map[string]any{
 			"success":    true,
-			"filepath":   absPath,
+			"filepath":   resolvedPath,
 			"format":     format,
 			"test_count": len(tests),
 		},

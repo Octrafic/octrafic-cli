@@ -53,6 +53,21 @@ func Export(format string, req ExportRequest) error {
 	return exporter.Export(req)
 }
 
+// ResolveExportPath converts relative paths to absolute paths under ~/Documents/octrafic/tests/
+func ResolveExportPath(path string) (string, error) {
+	if filepath.IsAbs(path) {
+		return path, nil
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	testsDir := filepath.Join(homeDir, "Documents", "octrafic", "tests")
+	return filepath.Join(testsDir, path), nil
+}
+
 // SupportedFormats returns list of supported export formats
 func SupportedFormats() []string {
 	formats := make([]string, 0, len(exporters))
