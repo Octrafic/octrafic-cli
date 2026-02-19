@@ -52,6 +52,7 @@ var (
 
 	forceOnboarding bool
 	updateFlag      bool
+	yoloMode        bool
 
 	resumeConversationID string
 )
@@ -223,7 +224,7 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 			os.Exit(1)
 		}
 
-		cli.StartWithProject(apiURL, analysis, project, authProvider, version)
+		cli.StartWithProject(apiURL, analysis, project, authProvider, version, yoloMode)
 	},
 }
 
@@ -249,6 +250,7 @@ func printCustomHelp(cmd *cobra.Command) {
 	printFlag(cmd, "clear-auth", "", "Remove saved authentication from project")
 
 	fmt.Printf("\nAdvanced:\n")
+	printFlag(cmd, "auto", "a", "Run in Auto-Execute mode without manual confirmation")
 	printFlag(cmd, "debug-file", "", "Path to debug log file (enables detailed logging)")
 	printFlag(cmd, "onboarding", "", "Force run onboarding wizard")
 	printFlag(cmd, "update", "", "Update octrafic to the latest version")
@@ -332,6 +334,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&clearAuth, "clear-auth", false, "Remove saved authentication from project")
 
 	rootCmd.Flags().StringVar(&debugFilePath, "debug-file", "", "Path to debug log file (enables detailed logging)")
+	rootCmd.Flags().BoolVarP(&yoloMode, "auto", "a", false, "Run tests without manual confirmation")
 	rootCmd.Flags().BoolVar(&forceOnboarding, "onboarding", false, "Force run onboarding wizard")
 	rootCmd.Flags().BoolVar(&updateFlag, "update", false, "Update octrafic to the latest version")
 
@@ -527,7 +530,7 @@ func loadAndStartProject(project *storage.Project) {
 		}
 	}
 
-	cli.StartWithProject(project.BaseURL, analysis, project, authProvider, version)
+	cli.StartWithProject(project.BaseURL, analysis, project, authProvider, version, yoloMode)
 }
 
 // handleFullscreenSelector shows fullscreen project+conversation selector
@@ -746,7 +749,7 @@ func loadAndStartConversation(project *storage.Project, conversation *storage.Co
 
 	fmt.Printf("✓ Loading conversation: %s\n", conversation.Title)
 
-	cli.StartWithConversation(project.BaseURL, analysis, project, authProvider, version, conversation.ID)
+	cli.StartWithConversation(project.BaseURL, analysis, project, authProvider, version, conversation.ID, yoloMode)
 }
 
 func main() {
