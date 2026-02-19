@@ -187,20 +187,20 @@ func GeneratePDF(markdownContent string, outputPath string) (string, error) {
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 	fullHTML := fmt.Sprintf(htmlTemplate, htmlBody.String(), timestamp)
 
-	// Always save reports to ~/Documents/octrafic/
+	// Always save reports to ~/Documents/octrafic/reports/
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
-	docsDir := filepath.Join(homeDir, "Documents", "octrafic")
-	if err := os.MkdirAll(docsDir, 0o755); err != nil {
+	reportsDir := filepath.Join(homeDir, "Documents", "octrafic", "reports")
+	if err := os.MkdirAll(reportsDir, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create output directory: %w", err)
 	}
 
 	if outputPath == "" {
 		outputPath = fmt.Sprintf("octrafic-report-%s.pdf", time.Now().Format("2006-01-02_150405"))
 	}
-	absPath := filepath.Join(docsDir, filepath.Base(outputPath))
+	absPath := filepath.Join(reportsDir, filepath.Base(outputPath))
 
 	// Write HTML to temp file
 	tmpFile, err := os.CreateTemp("", "octrafic-report-*.html")

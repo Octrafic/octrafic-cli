@@ -6,6 +6,7 @@ import (
 	"github.com/Octrafic/octrafic-cli/internal/agents"
 	"github.com/Octrafic/octrafic-cli/internal/core/parser"
 	"github.com/Octrafic/octrafic-cli/internal/core/reporter"
+	"github.com/Octrafic/octrafic-cli/internal/exporter"
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"maps"
@@ -398,6 +399,10 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 			}
 		}
 
+		if toolCall.Name == "ExportTests" {
+			return m.handleExportTests(toolCall)
+		}
+
 		return toolResultMsg{
 			toolID:   toolCall.ID,
 			toolName: toolCall.Name,
@@ -584,6 +589,51 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 		}
 	}
 
+	if toolName == "ExportTests" {
+		if resultMap, ok := result.(map[string]any); ok {
+			testCount, _ := resultMap["test_count"].(int)
+			exports, _ := resultMap["exports"].([]map[string]any)
+
+			formatLabel := map[string]string{
+				"postman": "Postman Collection",
+				"pytest":  "pytest tests",
+				"sh":      "curl script",
+			}
+
+			m.addMessage("")
+			m.addMessage(m.successStyle.Render("✓ Tests exported"))
+			m.addMessage(m.subtleStyle.Render(fmt.Sprintf("   Tests: %d", testCount)))
+			m.addMessage("")
+
+			for _, exportItem := range exports {
+				format, _ := exportItem["format"].(string)
+				filePath, _ := exportItem["filepath"].(string)
+
+				formatName := formatLabel[format]
+				if formatName == "" {
+					formatName = format
+				}
+
+				m.addMessage(m.subtleStyle.Render(fmt.Sprintf("   • %s: %s", formatName, filePath)))
+			}
+
+			if toolID != "" {
+				chatMsg := agent.ChatMessage{
+					Role: "user",
+					FunctionResponse: &agent.FunctionResponseData{
+						ID:       toolID,
+						Name:     "ExportTests",
+						Response: resultMap,
+					},
+				}
+				m.conversationHistory = append(m.conversationHistory, chatMsg)
+				m.saveChatMessageToConversation(chatMsg)
+				return m.sendChatMessage("")
+			}
+			return nil
+		}
+	}
+
 	if toolName == "GenerateTestPlan" {
 		// Add tool result to conversation history as function response
 		if toolID != "" {
@@ -617,4 +667,143 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 
 func (m *TestUIModel) loadProjectEndpoints() ([]parser.Endpoint, error) {
 	return storage.LoadEndpoints(m.currentProject.ID, m.currentProject.IsTemporary)
+}
+
+func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
+	exportsArg, ok := toolCall.Arguments["exports"]
+	if !ok {
+		return toolResultMsg{
+			toolID:   toolCall.ID,
+			toolName: toolCall.Name,
+			err:      fmt.Errorf("missing 'exports' parameter"),
+		}
+	}
+
+	exportsSlice, ok := exportsArg.([]any)
+	if !ok {
+		return toolResultMsg{
+			toolID:   toolCall.ID,
+			toolName: toolCall.Name,
+			err:      fmt.Errorf("'exports' must be an array"),
+		}
+	}
+
+	if len(exportsSlice) == 0 {
+		return toolResultMsg{
+			toolID:   toolCall.ID,
+			toolName: toolCall.Name,
+			err:      fmt.Errorf("'exports' array cannot be empty"),
+		}
+	}
+
+	var tests []exporter.TestData
+	if len(m.testGroupResults) > 0 {
+		tests = make([]exporter.TestData, 0, len(m.testGroupResults))
+		for _, result := range m.testGroupResults {
+			method, _ := result["method"].(string)
+			endpoint, _ := result["endpoint"].(string)
+			statusCode, _ := result["status_code"].(int)
+			responseBody, _ := result["response_body"].(string)
+			durationMS, _ := result["duration_ms"].(int64)
+			requiresAuth, _ := result["requires_auth"].(bool)
+			errStr, _ := result["error"].(string)
+
+			testData := exporter.TestData{
+				Method:       method,
+				Endpoint:     endpoint,
+				StatusCode:   statusCode,
+				ResponseBody: responseBody,
+				DurationMS:   durationMS,
+				RequiresAuth: requiresAuth,
+				Error:        errStr,
+			}
+			tests = append(tests, testData)
+		}
+	} else if len(m.tests) > 0 {
+		tests = make([]exporter.TestData, 0, len(m.tests))
+		for _, test := range m.tests {
+			requiresAuth := false
+			if test.BackendTest != nil {
+				requiresAuth = test.BackendTest.RequiresAuth
+			}
+			testData := exporter.TestData{
+				Method:       test.Method,
+				Endpoint:     test.Endpoint,
+				RequiresAuth: requiresAuth,
+			}
+			tests = append(tests, testData)
+		}
+	} else {
+		return toolResultMsg{
+			toolID:   toolCall.ID,
+			toolName: toolCall.Name,
+			err:      fmt.Errorf("no tests available to export. Generate test plan first using GenerateTestPlan"),
+		}
+	}
+
+	authType := ""
+	authData := make(map[string]string)
+	if m.currentProject != nil && m.currentProject.AuthConfig != nil {
+		authType = m.currentProject.AuthConfig.Type
+		authData["token"] = m.currentProject.AuthConfig.Token
+		authData["key_name"] = m.currentProject.AuthConfig.KeyName
+		authData["key_value"] = m.currentProject.AuthConfig.KeyValue
+		authData["username"] = m.currentProject.AuthConfig.Username
+		authData["password"] = m.currentProject.AuthConfig.Password
+	}
+
+	var exportResults []map[string]any
+	for _, exportItem := range exportsSlice {
+		exportMap, ok := exportItem.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		format, _ := exportMap["format"].(string)
+		outputPath, _ := exportMap["filepath"].(string)
+
+		if format == "" || outputPath == "" {
+			continue
+		}
+
+		resolvedPath, err := exporter.ResolveExportPath(outputPath)
+		if err != nil {
+			return toolResultMsg{
+				toolID:   toolCall.ID,
+				toolName: toolCall.Name,
+				err:      fmt.Errorf("failed to resolve path %s: %w", outputPath, err),
+			}
+		}
+
+		req := exporter.ExportRequest{
+			BaseURL:  m.baseURL,
+			Tests:    tests,
+			FilePath: resolvedPath,
+			AuthType: authType,
+			AuthData: authData,
+		}
+
+		if err := exporter.Export(format, req); err != nil {
+			return toolResultMsg{
+				toolID:   toolCall.ID,
+				toolName: toolCall.Name,
+				err:      fmt.Errorf("export to %s failed: %w", format, err),
+			}
+		}
+
+		exportResults = append(exportResults, map[string]any{
+			"format":   format,
+			"filepath": resolvedPath,
+		})
+	}
+
+	return toolResultMsg{
+		toolID:   toolCall.ID,
+		toolName: toolCall.Name,
+		result: map[string]any{
+			"success":    true,
+			"exports":    exportResults,
+			"test_count": len(tests),
+		},
+	}
 }

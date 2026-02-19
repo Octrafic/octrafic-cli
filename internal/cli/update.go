@@ -1241,6 +1241,25 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 		}
 
 		for _, toolCall := range m.streamedToolCalls {
+			if toolCall.Name == "ExportTests" {
+				m.streamedToolCalls = nil
+
+				m.currentTestToolID = toolCall.ID
+				m.currentTestToolName = "ExportTests"
+
+				exportsArg, _ := toolCall.Arguments["exports"].([]any)
+				formatCount := len(exportsArg)
+				label := fmt.Sprintf("%d format(s)", formatCount)
+
+				showToolWidget(m, "Exporting tests", label)
+				m.agentState = StateUsingTool
+				m.animationFrame = 0
+				m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
+				return m, tea.Batch(animationTick(), m.executeTool(toolCall))
+			}
+		}
+
+		for _, toolCall := range m.streamedToolCalls {
 			if toolCall.Name == "GenerateReport" {
 				m.streamedToolCalls = nil
 
