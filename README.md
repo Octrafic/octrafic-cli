@@ -5,7 +5,7 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 
 [Documentation](https://docs.octrafic.com)
 
-[Release](https://github.com/Octrafic/octrafic-cli/releases) | [Go Version](https://github.com/Octrafic/octrafic-cli/blob/main/go.mod) | [License](https://github.com/Octrafic/octrafic-cli/blob/main/LICENSE) | [Go Report Card](https://goreportcard.com/report/github.com/Octrafic/octrafic-cli)
+[Documentation](https://docs.octrafic.com)
 
 ![Demo](./assets/demo.gif)
 
