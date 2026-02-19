@@ -1241,6 +1241,31 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 		}
 
 		for _, toolCall := range m.streamedToolCalls {
+			if toolCall.Name == "ExportTests" {
+				m.streamedToolCalls = nil
+
+				m.currentTestToolID = toolCall.ID
+				m.currentTestToolName = "ExportTests"
+
+				format, _ := toolCall.Arguments["format"].(string)
+				formatLabel := map[string]string{
+					"postman": "Postman Collection",
+					"curl":    "curl script",
+				}
+				label := formatLabel[format]
+				if label == "" {
+					label = format
+				}
+
+				showToolWidget(m, "Exporting tests", label)
+				m.agentState = StateUsingTool
+				m.animationFrame = 0
+				m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
+				return m, tea.Batch(animationTick(), m.executeTool(toolCall))
+			}
+		}
+
+		for _, toolCall := range m.streamedToolCalls {
 			if toolCall.Name == "GenerateReport" {
 				m.streamedToolCalls = nil
 

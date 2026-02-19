@@ -589,6 +589,45 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 		}
 	}
 
+	if toolName == "ExportTests" {
+		if resultMap, ok := result.(map[string]any); ok {
+			filePath, _ := resultMap["filepath"].(string)
+			format, _ := resultMap["format"].(string)
+			testCount, _ := resultMap["test_count"].(int)
+
+			formatLabel := map[string]string{
+				"postman": "Postman Collection",
+				"curl":    "curl script",
+			}
+
+			formatName := formatLabel[format]
+			if formatName == "" {
+				formatName = format
+			}
+
+			m.addMessage("")
+			m.addMessage(m.successStyle.Render("✓ Tests exported"))
+			m.addMessage(m.subtleStyle.Render(fmt.Sprintf("   Format: %s", formatName)))
+			m.addMessage(m.subtleStyle.Render(fmt.Sprintf("   Tests: %d", testCount)))
+			m.addMessage(m.subtleStyle.Render(fmt.Sprintf("   File: %s", filePath)))
+
+			if toolID != "" {
+				chatMsg := agent.ChatMessage{
+					Role: "user",
+					FunctionResponse: &agent.FunctionResponseData{
+						ID:       toolID,
+						Name:     "ExportTests",
+						Response: resultMap,
+					},
+				}
+				m.conversationHistory = append(m.conversationHistory, chatMsg)
+				m.saveChatMessageToConversation(chatMsg)
+				return m.sendChatMessage("")
+			}
+			return nil
+		}
+	}
+
 	if toolName == "GenerateTestPlan" {
 		// Add tool result to conversation history as function response
 		if toolID != "" {
@@ -634,7 +673,7 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 		}
 	}
 
-	filepath, ok := toolCall.Arguments["filepath"].(string)
+	outputPath, ok := toolCall.Arguments["filepath"].(string)
 	if !ok {
 		return toolResultMsg{
 			toolID:   toolCall.ID,
@@ -649,6 +688,11 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 			toolName: toolCall.Name,
 			err:      fmt.Errorf("no test results available to export. Run tests first using ExecuteTestGroup"),
 		}
+	}
+
+	absPath, err := filepath.Abs(outputPath)
+	if err != nil {
+		absPath = outputPath
 	}
 
 	tests := make([]exporter.TestData, 0, len(m.testGroupResults))
@@ -688,7 +732,7 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 	req := exporter.ExportRequest{
 		BaseURL:  m.baseURL,
 		Tests:    tests,
-		FilePath: filepath,
+		FilePath: absPath,
 		AuthType: authType,
 		AuthData: authData,
 	}
@@ -706,7 +750,7 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 		toolName: toolCall.Name,
 		result: map[string]any{
 			"success":    true,
-			"filepath":   filepath,
+			"filepath":   absPath,
 			"format":     format,
 			"test_count": len(tests),
 		},
