@@ -36,7 +36,8 @@ type Exporter interface {
 
 var exporters = map[string]Exporter{
 	"postman": &PostmanExporter{},
-	"curl":    &CurlExporter{},
+	"pytest":  &PytestExporter{},
+	"sh":      &CurlExporter{},
 }
 
 // Export exports tests to the specified format

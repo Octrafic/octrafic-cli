@@ -597,7 +597,8 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 
 			formatLabel := map[string]string{
 				"postman": "Postman Collection",
-				"curl":    "curl script",
+				"pytest":  "pytest tests",
+				"sh":      "curl script",
 			}
 
 			formatName := formatLabel[format]

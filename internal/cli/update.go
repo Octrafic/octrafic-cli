@@ -1250,7 +1250,8 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 				format, _ := toolCall.Arguments["format"].(string)
 				formatLabel := map[string]string{
 					"postman": "Postman Collection",
-					"curl":    "curl script",
+					"pytest":  "pytest tests",
+					"sh":      "curl script",
 				}
 				label := formatLabel[format]
 				if label == "" {

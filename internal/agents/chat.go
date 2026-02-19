@@ -162,12 +162,12 @@ func getMainAgentTools() []common.Tool {
 				"properties": map[string]any{
 					"format": map[string]any{
 						"type":        "string",
-						"enum":        []string{"postman", "curl"},
-						"description": "Export format: 'postman' for Postman Collection v2.1 (JSON), 'curl' for bash script with curl commands",
+						"enum":        []string{"postman", "pytest", "sh"},
+						"description": "Export format: 'postman' for Postman Collection v2.1 (JSON), 'pytest' for Python tests (.py), 'sh' for bash script with curl commands",
 					},
 					"filepath": map[string]any{
 						"type":        "string",
-						"description": "Output file path (e.g., 'tests.json', './exports/api-tests.sh'). Can be relative or absolute. Parent directories will be created automatically.",
+						"description": "Output file path (e.g., 'tests.json', 'test_api.py', 'api-tests.sh'). Can be relative or absolute. Parent directories will be created automatically.",
 					},
 				},
 				"required": []string{"format", "filepath"},
