@@ -6,6 +6,7 @@ import (
 	"github.com/Octrafic/octrafic-cli/internal/agents"
 	"github.com/Octrafic/octrafic-cli/internal/core/parser"
 	"github.com/Octrafic/octrafic-cli/internal/core/reporter"
+	"github.com/Octrafic/octrafic-cli/internal/exporter"
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"maps"
@@ -398,6 +399,10 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 			}
 		}
 
+		if toolCall.Name == "ExportTests" {
+			return m.handleExportTests(toolCall)
+		}
+
 		return toolResultMsg{
 			toolID:   toolCall.ID,
 			toolName: toolCall.Name,
@@ -617,4 +622,93 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 
 func (m *TestUIModel) loadProjectEndpoints() ([]parser.Endpoint, error) {
 	return storage.LoadEndpoints(m.currentProject.ID, m.currentProject.IsTemporary)
+}
+
+func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
+	format, ok := toolCall.Arguments["format"].(string)
+	if !ok {
+		return toolResultMsg{
+			toolID:   toolCall.ID,
+			toolName: toolCall.Name,
+			err:      fmt.Errorf("missing or invalid 'format' parameter"),
+		}
+	}
+
+	filepath, ok := toolCall.Arguments["filepath"].(string)
+	if !ok {
+		return toolResultMsg{
+			toolID:   toolCall.ID,
+			toolName: toolCall.Name,
+			err:      fmt.Errorf("missing or invalid 'filepath' parameter"),
+		}
+	}
+
+	if len(m.testGroupResults) == 0 {
+		return toolResultMsg{
+			toolID:   toolCall.ID,
+			toolName: toolCall.Name,
+			err:      fmt.Errorf("no test results available to export. Run tests first using ExecuteTestGroup"),
+		}
+	}
+
+	tests := make([]exporter.TestData, 0, len(m.testGroupResults))
+	for _, result := range m.testGroupResults {
+		method, _ := result["method"].(string)
+		endpoint, _ := result["endpoint"].(string)
+		statusCode, _ := result["status_code"].(int)
+		responseBody, _ := result["response_body"].(string)
+		durationMS, _ := result["duration_ms"].(int64)
+		requiresAuth, _ := result["requires_auth"].(bool)
+		errStr, _ := result["error"].(string)
+
+		testData := exporter.TestData{
+			Method:       method,
+			Endpoint:     endpoint,
+			StatusCode:   statusCode,
+			ResponseBody: responseBody,
+			DurationMS:   durationMS,
+			RequiresAuth: requiresAuth,
+			Error:        errStr,
+		}
+
+		tests = append(tests, testData)
+	}
+
+	authType := ""
+	authData := make(map[string]string)
+	if m.currentProject != nil && m.currentProject.AuthConfig != nil {
+		authType = m.currentProject.AuthConfig.Type
+		authData["token"] = m.currentProject.AuthConfig.Token
+		authData["key_name"] = m.currentProject.AuthConfig.KeyName
+		authData["key_value"] = m.currentProject.AuthConfig.KeyValue
+		authData["username"] = m.currentProject.AuthConfig.Username
+		authData["password"] = m.currentProject.AuthConfig.Password
+	}
+
+	req := exporter.ExportRequest{
+		BaseURL:  m.baseURL,
+		Tests:    tests,
+		FilePath: filepath,
+		AuthType: authType,
+		AuthData: authData,
+	}
+
+	if err := exporter.Export(format, req); err != nil {
+		return toolResultMsg{
+			toolID:   toolCall.ID,
+			toolName: toolCall.Name,
+			err:      fmt.Errorf("export failed: %w", err),
+		}
+	}
+
+	return toolResultMsg{
+		toolID:   toolCall.ID,
+		toolName: toolCall.Name,
+		result: map[string]any{
+			"success":    true,
+			"filepath":   filepath,
+			"format":     format,
+			"test_count": len(tests),
+		},
+	}
 }

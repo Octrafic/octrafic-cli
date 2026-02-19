@@ -153,6 +153,26 @@ func getMainAgentTools() []common.Tool {
 				"required": []string{"report_content"},
 			},
 		},
+		{
+			Name:        "ExportTests",
+			Description: "Export executed API tests to a file in the specified format. Call this ONLY when the user explicitly requests to save/export tests. Do NOT call this automatically after test execution.",
+			InputSchema: map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"properties": map[string]any{
+					"format": map[string]any{
+						"type":        "string",
+						"enum":        []string{"postman", "curl"},
+						"description": "Export format: 'postman' for Postman Collection v2.1 (JSON), 'curl' for bash script with curl commands",
+					},
+					"filepath": map[string]any{
+						"type":        "string",
+						"description": "Output file path (e.g., 'tests.json', './exports/api-tests.sh'). Can be relative or absolute. Parent directories will be created automatically.",
+					},
+				},
+				"required": []string{"format", "filepath"},
+			},
+		},
 	}
 }
 
