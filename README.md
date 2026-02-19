@@ -1,9 +1,5 @@
 ![Banner](./assets/banner.png)
 
-<p align="center">
-  <img src="https://octrafic.com/octrafic-logo.png" alt="Octrafic" width="120" />
-</p>
-
 <h1 align="center">Octrafic</h1>
 
 <p align="center">
