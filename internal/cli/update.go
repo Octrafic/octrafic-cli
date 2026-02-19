@@ -642,6 +642,75 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		return m, nil, false
 	}
 
+	if strings.HasPrefix(userInput, "/save") {
+		m.addMessage("")
+		m.addMessage(renderUserLabel() + " " + userInput)
+		m.addMessage("")
+		m.lastMessageRole = "user"
+
+		if m.currentProject == nil || !m.currentProject.IsTemporary {
+			m.addMessage(m.errorStyle.Render("✗ No temporary project to save"))
+			m.addMessage(m.subtleStyle.Render("Use /save <name> when working with a temp project"))
+			m.lastMessageRole = "assistant"
+			return m, nil, true
+		}
+
+		parts := strings.Fields(userInput)
+		if len(parts) < 2 || parts[1] == "" {
+			m.addMessage(m.errorStyle.Render("Usage: /save <project-name>"))
+			m.lastMessageRole = "assistant"
+			return m, nil, true
+		}
+
+		newName := parts[1]
+
+		if conflict, err := storage.CheckNameConflict(newName, m.currentProject.ID); err != nil {
+			m.addMessage(m.errorStyle.Render("Failed to check name: " + err.Error()))
+			m.lastMessageRole = "assistant"
+			return m, nil, true
+		} else if conflict != nil {
+			m.addMessage(m.errorStyle.Render(fmt.Sprintf("✗ Project name \"%s\" already exists", newName)))
+			m.lastMessageRole = "assistant"
+			return m, nil, true
+		}
+
+		updatedProject, err := storage.ConvertToPermanent(m.currentProject, newName)
+		if err != nil {
+			m.addMessage(m.errorStyle.Render("✗ Failed to save project: " + err.Error()))
+			m.lastMessageRole = "assistant"
+			return m, nil, true
+		}
+
+		m.currentProject = updatedProject
+
+		if m.conversationID != "" && len(m.conversationHistory) > 0 {
+			title := newName
+			if _, err := storage.CreateConversation(updatedProject.ID, m.conversationID, title); err == nil {
+				m.conversationTitle = title
+				for _, msg := range m.conversationHistory {
+					meta := map[string]interface{}{}
+					if msg.ReasoningContent != "" {
+						meta["reasoning"] = msg.ReasoningContent
+					}
+					if len(msg.FunctionCalls) > 0 {
+						meta["tool_calls"] = msg.FunctionCalls
+					}
+					if msg.InputTokens > 0 {
+						meta["input_tokens"] = msg.InputTokens
+					}
+					if msg.OutputTokens > 0 {
+						meta["output_tokens"] = msg.OutputTokens
+					}
+					_ = storage.SaveMessage(updatedProject.ID, m.conversationID, msg.Role, msg.Content, meta)
+				}
+			}
+		}
+
+		m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ Project saved as \"%s\"", newName)))
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+	}
+
 	switch userInput {
 	case "/clear":
 		m.addMessage("")
