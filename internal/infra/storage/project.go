@@ -458,6 +458,62 @@ func CheckNameConflict(name string, excludeProjectID string) (*Project, error) {
 	return nil, nil // No conflict
 }
 
+// ConvertToPermanent moves a temporary project to permanent storage with a new name
+func ConvertToPermanent(project *Project, newName string) (*Project, error) {
+	if !project.IsTemporary {
+		return nil, fmt.Errorf("project is not temporary")
+	}
+
+	tempPath, err := GetTempProjectsDir()
+	if err != nil {
+		return nil, err
+	}
+	srcPath := filepath.Join(tempPath, project.ID)
+
+	permanentPath, err := GetProjectsDir()
+	if err != nil {
+		return nil, err
+	}
+	dstPath := filepath.Join(permanentPath, project.ID)
+
+	if err := os.MkdirAll(dstPath, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create permanent project directory: %w", err)
+	}
+
+	entries, err := os.ReadDir(srcPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read temp project directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		srcFile := filepath.Join(srcPath, entry.Name())
+		dstFile := filepath.Join(dstPath, entry.Name())
+
+		data, err := os.ReadFile(srcFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file %s: %w", entry.Name(), err)
+		}
+		if err := os.WriteFile(dstFile, data, 0644); err != nil {
+			return nil, fmt.Errorf("failed to write file %s: %w", entry.Name(), err)
+		}
+	}
+
+	project.Name = newName
+	project.IsTemporary = false
+	project.UpdatedAt = time.Now()
+
+	if err := SaveProject(project); err != nil {
+		return nil, fmt.Errorf("failed to save permanent project: %w", err)
+	}
+
+	_ = os.RemoveAll(srcPath)
+
+	return project, nil
+}
+
 // CleanupTempProjects removes all temporary projects
 func CleanupTempProjects() error {
 	tempPath, err := GetTempProjectsDir()

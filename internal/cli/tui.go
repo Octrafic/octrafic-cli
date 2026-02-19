@@ -54,6 +54,7 @@ var availableCommands = []Command{
 	{Name: "/auth", Description: "Open authentication wizard"},
 	{Name: "/models", Description: "Select AI model"},
 	{Name: "/info", Description: "Show current project info"},
+	{Name: "/save", Description: "Save temp project with a name"},
 	{Name: "/release-notes", Description: "Show latest release notes"},
 }
 
@@ -508,8 +509,14 @@ func (m TestUIModel) View() string {
 		if m.agentState == StateIdle && m.showClearHint {
 			bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Warning).Render("Press ESC again to clear"))
 		} else {
-			octraficDisplay := lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true).Render("Octrafic")
-			bottomParts = append(bottomParts, octraficDisplay)
+			bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Primary).Bold(true).Render("Octrafic"))
+			if m.currentProject != nil {
+				if m.currentProject.IsTemporary {
+					bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Error).Render("[temp]"))
+				} else if m.currentProject.Name != "" {
+					bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Primary).Render(m.currentProject.Name))
+				}
+			}
 			if m.modelName != "" {
 				modelName := m.modelName
 				if idx := strings.Index(modelName, "/"); idx != -1 {
