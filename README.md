@@ -5,8 +5,6 @@ Chat naturally with your APIs - no scripts, no configuration files, just convers
 
 [Documentation](https://docs.octrafic.com)
 
-[Documentation](https://docs.octrafic.com)
-
 ![Demo](./assets/demo.gif)
 
 ## Features
