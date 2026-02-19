@@ -1,7 +1,5 @@
 ![Banner](./assets/banner.png)
 
-<h1 align="center">Octrafic</h1>
-
 <p align="center">
   AI-powered CLI tool for API testing and exploration.<br/>
   Chat naturally with your APIs - no scripts, no configuration files, just conversation.
