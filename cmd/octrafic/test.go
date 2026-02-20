@@ -78,7 +78,7 @@ var testCmd = &cobra.Command{
 		if testPath != "" {
 			var specContent *parser.Specification
 			var parseErr error
-			
+
 			// Simple logic to select parser if no spec explicit
 			if strings.HasSuffix(testPath, ".sh") {
 				specContent, parseErr = parser.ParseShellScript(testPath)

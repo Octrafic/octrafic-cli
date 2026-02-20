@@ -46,7 +46,7 @@ func parseShellContent(content []byte) (*Specification, error) {
 		if inCommand && !strings.HasSuffix(line, "\\") {
 			inCommand = false
 			currentCommand = strings.ReplaceAll(currentCommand, "\\", "")
-			
+
 			endpoint := parseCurlCommand(currentCommand)
 			if endpoint != nil {
 				spec.Endpoints = append(spec.Endpoints, *endpoint)
@@ -77,7 +77,7 @@ func parseCurlCommand(cmd string) *Endpoint {
 
 	for i := 1; i < len(parts); i++ {
 		part := parts[i]
-		
+
 		switch part {
 		case "-X", "--request":
 			if i+1 < len(parts) {
