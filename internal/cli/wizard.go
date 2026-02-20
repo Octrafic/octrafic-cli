@@ -166,7 +166,7 @@ func BuildAuthProviderFromForm(authType string, fields []FormField) (auth.AuthPr
 }
 
 // handleWizardKeys handles keyboard input in wizard mode
-func handleWizardKeys(m TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func handleWizardKeys(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.wizardState == nil {
 		m.agentState = StateIdle
 		return m, nil
@@ -330,7 +330,7 @@ func handleWizardKeys(m TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // submitAuthForm validates and applies the auth configuration
-func submitAuthForm(m TestUIModel) (tea.Model, tea.Cmd) {
+func submitAuthForm(m *TestUIModel) (tea.Model, tea.Cmd) {
 	authProvider, profileName, err := BuildAuthProviderFromForm(
 		m.wizardState.SelectedType,
 		m.wizardState.FormFields,
@@ -373,7 +373,7 @@ func submitAuthForm(m TestUIModel) (tea.Model, tea.Cmd) {
 }
 
 // RenderWizard renders the current wizard state
-func (m TestUIModel) RenderWizard() string {
+func (m *TestUIModel) RenderWizard() string {
 	if m.wizardState == nil {
 		return ""
 	}
@@ -387,7 +387,7 @@ func (m TestUIModel) RenderWizard() string {
 }
 
 // renderAuthWizard renders the authentication wizard
-func (m TestUIModel) renderAuthWizard() string {
+func (m *TestUIModel) renderAuthWizard() string {
 	switch m.wizardState.Step {
 	case StepSelectType:
 		return m.renderAuthTypeSelector()
@@ -399,7 +399,7 @@ func (m TestUIModel) renderAuthWizard() string {
 }
 
 // renderAuthTypeSelector renders the auth type selection menu
-func (m TestUIModel) renderAuthTypeSelector() string {
+func (m *TestUIModel) renderAuthTypeSelector() string {
 	var b strings.Builder
 
 	// Border style
@@ -447,7 +447,7 @@ func (m TestUIModel) renderAuthTypeSelector() string {
 }
 
 // renderAuthForm renders the auth configuration form
-func (m TestUIModel) renderAuthForm() string {
+func (m *TestUIModel) renderAuthForm() string {
 	var b strings.Builder
 
 	// Border style

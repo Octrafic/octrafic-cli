@@ -276,6 +276,13 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 				}
 			}
 
+			expectedStatus := 200
+			if es, ok := toolCall.Arguments["expected_status"].(float64); ok {
+				expectedStatus = int(es)
+			} else if es, ok := toolCall.Arguments["expected_status"].(int); ok {
+				expectedStatus = es
+			}
+
 			headers := make(map[string]string)
 			if h, ok := toolCall.Arguments["headers"].(map[string]any); ok {
 				for k, v := range h {
@@ -302,23 +309,29 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 					toolID:   toolCall.ID,
 					toolName: toolCall.Name,
 					result: map[string]any{
-						"method":   method,
-						"endpoint": endpoint,
-						"error":    err.Error(),
+						"method":          method,
+						"endpoint":        endpoint,
+						"error":           err.Error(),
+						"expected_status": expectedStatus,
+						"passed":          false,
 					},
 					err: err,
 				}
 			}
 
+			passed := result.StatusCode == expectedStatus
+
 			return toolResultMsg{
 				toolID:   toolCall.ID,
 				toolName: toolCall.Name,
 				result: map[string]any{
-					"method":        method,
-					"endpoint":      endpoint,
-					"status_code":   result.StatusCode,
-					"response_body": result.ResponseBody,
-					"duration_ms":   result.Duration.Milliseconds(),
+					"method":          method,
+					"endpoint":        endpoint,
+					"status_code":     result.StatusCode,
+					"expected_status": expectedStatus,
+					"response_body":   result.ResponseBody,
+					"duration_ms":     result.Duration.Milliseconds(),
+					"passed":          passed,
 				},
 				err: nil,
 			}
@@ -417,8 +430,19 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 			method, _ := resultMap["method"].(string)
 			endpoint, _ := resultMap["endpoint"].(string)
 			statusCode, _ := resultMap["status_code"].(int)
+			expectedStatus, _ := resultMap["expected_status"].(int)
 			responseBody, _ := resultMap["response_body"].(string)
 			durationMs, _ := resultMap["duration_ms"].(int64)
+
+			var passed bool
+			if p, ok := resultMap["passed"].(bool); ok {
+				passed = p
+			} else {
+				if expectedStatus == 0 {
+					expectedStatus = 200
+				}
+				passed = statusCode == expectedStatus
+			}
 
 			methodStyle, ok := m.methodStyles[method]
 			if !ok {
@@ -428,14 +452,23 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 
 			statusStyle := m.successStyle
 			statusIcon := "✓"
-			if statusCode >= 400 {
+			if !passed {
 				statusStyle = m.errorStyle
 				statusIcon = "✗"
+				if m.isHeadless {
+					m.headlessExitCode = 1
+				}
 			}
+
+			statusMsg := fmt.Sprintf("   Status: %d", statusCode)
+			if !passed && expectedStatus > 0 {
+				statusMsg += fmt.Sprintf(" (expected %d)", expectedStatus)
+			}
+			statusMsg += fmt.Sprintf(" | Duration: %dms", durationMs)
 
 			m.addMessage("")
 			m.addMessage(statusStyle.Render(statusIcon) + " " + methodFormatted + " " + endpoint)
-			m.addMessage(m.subtleStyle.Render(fmt.Sprintf("   Status: %d | Duration: %dms", statusCode, durationMs)))
+			m.addMessage(m.subtleStyle.Render(statusMsg))
 
 			if len(responseBody) > 0 {
 				preview := responseBody
@@ -472,18 +505,29 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 			count, _ := resultMap["count"].(int)
 			results, _ := resultMap["results"].([]map[string]any)
 
-			m.addMessage("")
-			m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ Completed %d tests", count)))
+			failedCount := 0
+			passedCount := 0
 
 			// Display each test result
 			for _, testResult := range results {
 				method, _ := testResult["method"].(string)
 				endpoint, _ := testResult["endpoint"].(string)
 				statusCode, _ := testResult["status_code"].(int)
+				expectedStatus, _ := testResult["expected_status"].(int)
 				durationMs, _ := testResult["duration_ms"].(int64)
 				requiresAuth := false
 				if ra, ok := testResult["requires_auth"].(bool); ok {
 					requiresAuth = ra
+				}
+
+				var passed bool
+				if p, ok := testResult["passed"].(bool); ok {
+					passed = p
+				} else {
+					if expectedStatus == 0 {
+						expectedStatus = 200
+					}
+					passed = statusCode == expectedStatus
 				}
 
 				methodStyle, ok := m.methodStyles[method]
@@ -500,14 +544,33 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 
 				statusStyle := m.successStyle
 				statusIcon := "✓"
-				if statusCode >= 400 {
+				if !passed {
 					statusStyle = m.errorStyle
 					statusIcon = "✗"
+					failedCount++
+				} else {
+					passedCount++
 				}
+
+				statusMsg := fmt.Sprintf("   Status: %d", statusCode)
+				if !passed && expectedStatus > 0 {
+					statusMsg += fmt.Sprintf(" (expected %d)", expectedStatus)
+				}
+				statusMsg += fmt.Sprintf(" | Duration: %dms", durationMs)
 
 				m.addMessage("")
 				m.addMessage(statusStyle.Render(statusIcon) + " " + methodFormatted + " " + endpoint + authIndicator)
-				m.addMessage(m.subtleStyle.Render(fmt.Sprintf("   Status: %d | Duration: %dms", statusCode, durationMs)))
+				m.addMessage(m.subtleStyle.Render(statusMsg))
+			}
+
+			m.addMessage("")
+			if failedCount > 0 {
+				m.addMessage(m.errorStyle.Render(fmt.Sprintf("✗ %d/%d tests failed", failedCount, count)))
+				if m.isHeadless {
+					m.headlessExitCode = 1
+				}
+			} else {
+				m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ All %d tests passed", count)))
 			}
 
 			// Add tool result to conversation history as function response

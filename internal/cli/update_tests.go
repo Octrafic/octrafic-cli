@@ -153,6 +153,13 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 		requiresAuth = ra
 	}
 
+	expectedStatus := 200
+	if es, ok := testMap["expected_status"].(float64); ok {
+		expectedStatus = int(es)
+	} else if es, ok := testMap["expected_status"].(int); ok {
+		expectedStatus = es
+	}
+
 	headers := make(map[string]string)
 	if h, ok := testMap["headers"].(map[string]any); ok {
 		for k, v := range h {
@@ -185,28 +192,43 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 		m.addMessage(m.subtleStyle.Render(fmt.Sprintf("    Error: %s", err.Error())))
 
 		m.testGroupResults = append(m.testGroupResults, map[string]any{
-			"method":        method,
-			"endpoint":      endpoint,
-			"error":         err.Error(),
-			"requires_auth": requiresAuth,
+			"method":          method,
+			"endpoint":        endpoint,
+			"error":           err.Error(),
+			"requires_auth":   requiresAuth,
+			"expected_status": expectedStatus,
+			"passed":          false,
 		})
 	} else {
+		passed := result.StatusCode == expectedStatus
 		statusIcon := "✓"
 		statusStyle := m.successStyle
-		if result.StatusCode >= 400 {
+		if !passed {
 			statusIcon = "✗"
 			statusStyle = m.errorStyle
+			if m.isHeadless {
+				m.headlessExitCode = 1
+			}
 		}
+
+		statusMsg := fmt.Sprintf("    Status: %d", result.StatusCode)
+		if !passed {
+			statusMsg += fmt.Sprintf(" (expected %d)", expectedStatus)
+		}
+		statusMsg += fmt.Sprintf(" | Duration: %dms", result.Duration.Milliseconds())
+
 		m.addMessage(fmt.Sprintf("  %s %s %s%s", statusStyle.Render(statusIcon), methodFormatted, endpoint, authIndicator))
-		m.addMessage(m.subtleStyle.Render(fmt.Sprintf("    Status: %d | Duration: %dms", result.StatusCode, result.Duration.Milliseconds())))
+		m.addMessage(m.subtleStyle.Render(statusMsg))
 
 		m.testGroupResults = append(m.testGroupResults, map[string]any{
-			"method":        method,
-			"endpoint":      endpoint,
-			"status_code":   result.StatusCode,
-			"response_body": result.ResponseBody,
-			"duration_ms":   result.Duration.Milliseconds(),
-			"requires_auth": requiresAuth,
+			"method":          method,
+			"endpoint":        endpoint,
+			"status_code":     result.StatusCode,
+			"expected_status": expectedStatus,
+			"response_body":   result.ResponseBody,
+			"duration_ms":     result.Duration.Milliseconds(),
+			"requires_auth":   requiresAuth,
+			"passed":          passed,
 		})
 	}
 	m.testGroupCompletedCount++
