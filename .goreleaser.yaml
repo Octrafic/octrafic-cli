@@ -75,7 +75,6 @@ archives:
       - LICENSE
       - README.md
       - CONTRIBUTING.md
-      - INSTALL.md
 
 checksum:
   name_template: "checksums.txt"
@@ -140,8 +139,6 @@ nfpms:
         dst: /usr/share/doc/octrafic/LICENSE
       - src: README.md
         dst: /usr/share/doc/octrafic/README.md
-      - src: INSTALL.md
-        dst: /usr/share/doc/octrafic/INSTALL.md
 
     # DEB specific
     deb:
