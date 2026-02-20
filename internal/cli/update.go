@@ -51,6 +51,17 @@ func (m *TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case streamDoneMsg:
 		m.agentState = StateIdle
 		if m.isHeadless {
+			m.addMessage("")
+			if m.headlessExitCode == 0 {
+				m.addMessage(m.successStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+				m.addMessage(m.successStyle.Render("✓ Test execution completed successfully"))
+				m.addMessage(m.successStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+			} else {
+				m.addMessage(m.errorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+				m.addMessage(m.errorStyle.Render("✗ Test execution failed"))
+				m.addMessage(m.errorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+			}
+			m.addMessage("")
 			return m, tea.Quit
 		}
 		return m, nil
@@ -67,6 +78,11 @@ func (m *TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addMessage("")
 
 			if m.isHeadless {
+				m.headlessExitCode = 1
+				m.addMessage(m.errorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+				m.addMessage(m.errorStyle.Render("✗ Test execution failed"))
+				m.addMessage(m.errorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+				m.addMessage("")
 				return m, tea.Quit
 			}
 		} else {
@@ -115,6 +131,10 @@ func (m *TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addMessage("")
 			m.lastMessageRole = "assistant"
 
+			if m.isHeadless {
+				m.headlessExitCode = 1
+			}
+
 			m.conversationHistory = append(m.conversationHistory, agent.ChatMessage{
 				Role:    "user",
 				Content: fmt.Sprintf("Tool error: %s", msg.err.Error()),
@@ -130,6 +150,17 @@ func (m *TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.agentState = StateIdle
 			if m.isHeadless {
+				m.addMessage("")
+				if m.headlessExitCode == 0 {
+					m.addMessage(m.successStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+					m.addMessage(m.successStyle.Render("✓ Test execution completed successfully"))
+					m.addMessage(m.successStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+				} else {
+					m.addMessage(m.errorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+					m.addMessage(m.errorStyle.Render("✗ Test execution failed"))
+					m.addMessage(m.errorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+				}
+				m.addMessage("")
 				return m, tea.Quit
 			}
 		}
@@ -543,6 +574,17 @@ func handleStreamingMsg(m *TestUIModel, msg reasoningChunkMsg) (tea.Model, tea.C
 		m.agentState = StateIdle
 		if m.isHeadless {
 			logger.Debug("Exiting headless mode. Triggering tea.Quit()")
+			m.addMessage("")
+			if m.headlessExitCode == 0 {
+				m.addMessage(m.successStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+				m.addMessage(m.successStyle.Render("✓ Test execution completed successfully"))
+				m.addMessage(m.successStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+			} else {
+				m.addMessage(m.errorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+				m.addMessage(m.errorStyle.Render("✗ Test execution failed"))
+				m.addMessage(m.errorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+			}
+			m.addMessage("")
 			return m, tea.Quit
 		}
 		logger.Debug("Not headless. Staying in UI.")
@@ -1316,6 +1358,17 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 
 	m.agentState = StateIdle
 	if m.isHeadless {
+		m.addMessage("")
+		if m.headlessExitCode == 0 {
+			m.addMessage(m.successStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+			m.addMessage(m.successStyle.Render("✓ Test execution completed successfully"))
+			m.addMessage(m.successStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+		} else {
+			m.addMessage(m.errorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+			m.addMessage(m.errorStyle.Render("✗ Test execution failed"))
+			m.addMessage(m.errorStyle.Render("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"))
+		}
+		m.addMessage("")
 		return m, tea.Quit
 	}
 	return m, nil

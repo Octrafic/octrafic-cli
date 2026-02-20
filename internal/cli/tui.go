@@ -218,8 +218,9 @@ type TestUIModel struct {
 	selectedFileIndex int
 	fileFilterText    string
 
-	isHeadless    bool
-	initialPrompt string
+	isHeadless       bool
+	initialPrompt    string
+	headlessExitCode int // Exit code for headless mode: 0=success, 1=failure
 }
 
 func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis, authProvider auth.AuthProvider, version string, autoMode bool, isHeadless bool) *TestUIModel {

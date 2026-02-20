@@ -72,8 +72,8 @@ var testCmd = &cobra.Command{
 			}
 
 			// Start headless execution with prompt
-			cli.StartHeadless(apiURL, analysis, project, authProvider, version, testPrompt, testAuto)
-			return
+			exitCode := cli.StartHeadless(apiURL, analysis, project, authProvider, version, testPrompt, testAuto)
+			os.Exit(exitCode)
 		}
 
 		if testPath != "" {

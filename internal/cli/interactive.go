@@ -69,7 +69,8 @@ func StartWithConversation(baseURL string, analysis *analyzer.Analysis, project 
 
 // StartHeadless executes a single prompt non-interactively and exits when complete.
 // Used for CI/CD environments where no user interaction is available.
-func StartHeadless(baseURL string, analysis *analyzer.Analysis, project *storage.Project, authProvider auth.AuthProvider, version string, prompt string, yoloMode bool) {
+// Returns exit code: 0 for success, 1 for test failures.
+func StartHeadless(baseURL string, analysis *analyzer.Analysis, project *storage.Project, authProvider auth.AuthProvider, version string, prompt string, yoloMode bool) int {
 	specPath := project.SpecPath
 
 	model := NewTestUIModel(baseURL, specPath, analysis, authProvider, version, yoloMode, true)
@@ -93,9 +94,15 @@ func StartHeadless(baseURL string, analysis *analyzer.Analysis, project *storage
 
 	p := tea.NewProgram(model, tea.WithInput(r))
 
-	if _, err := p.Run(); err != nil {
+	finalModel, err := p.Run()
+	if err != nil {
 		logger.Error("Error running headless mode", logger.Err(err))
 		os.Exit(1)
 	}
 	r.Close()
+
+	if m, ok := finalModel.(*TestUIModel); ok {
+		return m.headlessExitCode
+	}
+	return 0
 }
