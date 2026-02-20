@@ -24,7 +24,6 @@ var testCmd = &cobra.Command{
 	Use:   "test",
 	Short: "Run API tests automatically without the interactive UI",
 	Run: func(cmd *cobra.Command, args []string) {
-		
 		if testPath == "" && testPrompt == "" {
 			fmt.Println("Error: You must provide a file path (--path) or a prompt (--prompt)")
 			os.Exit(1)

@@ -342,7 +342,7 @@ func (m *TestUIModel) Init() tea.Cmd {
 	if m.conversationTitle != "" {
 		title = m.conversationTitle + " - Octrafic"
 	}
-	
+
 	cmds := []tea.Cmd{textarea.Blink, m.spinner.Tick, tea.SetWindowTitle(title)}
 
 	if m.initialPrompt != "" {

@@ -31,7 +31,7 @@ func parseShellContent(content []byte) (*Specification, error) {
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		
+
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}

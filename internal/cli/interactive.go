@@ -90,7 +90,7 @@ func StartHeadless(baseURL string, analysis *analyzer.Analysis, project *storage
 		logger.Error("Failed to create pipe", logger.Err(err))
 		os.Exit(1)
 	}
-	w.Close()
+	_ = w.Close()
 
 	p := tea.NewProgram(model, tea.WithInput(r))
 
@@ -99,7 +99,7 @@ func StartHeadless(baseURL string, analysis *analyzer.Analysis, project *storage
 		logger.Error("Error running headless mode", logger.Err(err))
 		os.Exit(1)
 	}
-	r.Close()
+	_ = r.Close()
 
 	if m, ok := finalModel.(*TestUIModel); ok {
 		return m.headlessExitCode

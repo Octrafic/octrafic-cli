@@ -434,7 +434,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 			responseBody, _ := resultMap["response_body"].(string)
 			durationMs, _ := resultMap["duration_ms"].(int64)
 
-			passed := true
+			var passed bool
 			if p, ok := resultMap["passed"].(bool); ok {
 				passed = p
 			} else {
@@ -520,7 +520,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 					requiresAuth = ra
 				}
 
-				passed := true
+				var passed bool
 				if p, ok := testResult["passed"].(bool); ok {
 					passed = p
 				} else {
