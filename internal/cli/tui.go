@@ -495,7 +495,12 @@ func (m *TestUIModel) View() string {
 	} else {
 		s.WriteString("\n")
 
-		s.WriteString(m.borderStyle.Render(m.textarea.View()) + "\n")
+		borderColor := Theme.Primary
+		if m.executionMode == ModeAutoExecute {
+			borderColor = Theme.Warning
+		}
+		inputBorderStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(borderColor).Padding(0, 1)
+		s.WriteString(inputBorderStyle.Render(m.textarea.View()) + "\n")
 
 		if m.agentState == StateShowingCommands && len(m.filteredCommands) > 0 {
 			s.WriteString("\n")
@@ -539,7 +544,7 @@ func (m *TestUIModel) View() string {
 				}
 			}
 			if m.executionMode == ModeAutoExecute {
-				bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Warning).Bold(true).Render("[Auto]"))
+				bottomParts = append(bottomParts, lipgloss.NewStyle().Foreground(Theme.Warning).Bold(true).Render("Auto"))
 			}
 			if m.modelName != "" {
 				modelName := m.modelName
