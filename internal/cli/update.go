@@ -20,9 +20,8 @@ import (
 )
 
 type releaseNotesMsg struct {
-	notes string
-	url   string
-	err   error
+	releases []updater.ReleaseEntry
+	err      error
 }
 
 // Update handles all incoming messages and updates the model state.
@@ -169,10 +168,11 @@ func (m *TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.addMessage(m.errorStyle.Render("Failed to fetch release notes: " + msg.err.Error()))
 		} else {
-			m.addMessage(renderMarkdown(msg.notes))
-			if msg.url != "" {
+			for _, r := range msg.releases {
+				m.addMessage(lipgloss.NewStyle().Bold(true).Foreground(Theme.Primary).Render(r.TagName))
+				m.addMessage(renderMarkdown(r.Body))
+				m.addMessage(lipgloss.NewStyle().Foreground(Theme.Cyan).Render(r.HTMLURL))
 				m.addMessage("")
-				m.addMessage(lipgloss.NewStyle().Foreground(Theme.Cyan).Render(msg.url))
 			}
 		}
 		m.lastMessageRole = "assistant"
@@ -846,8 +846,8 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		m.lastMessageRole = "user"
 
 		cmd := func() tea.Msg {
-			notes, url, err := updater.FetchReleaseNotes("")
-			return releaseNotesMsg{notes: notes, url: url, err: err}
+			releases, err := updater.FetchReleaseNotes(5)
+			return releaseNotesMsg{releases: releases, err: err}
 		}
 		return m, cmd, true
 

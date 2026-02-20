@@ -52,6 +52,13 @@ type githubRelease struct {
 	HTMLURL string `json:"html_url"`
 }
 
+// ReleaseEntry holds information about a single release
+type ReleaseEntry struct {
+	TagName string
+	Body    string
+	HTMLURL string
+}
+
 // CheckLatestVersion checks GitHub for the latest release and compares with current version
 func CheckLatestVersion(currentVersion string) (*UpdateInfo, error) {
 	client := &http.Client{Timeout: 3 * time.Second}
@@ -82,35 +89,37 @@ func CheckLatestVersion(currentVersion string) (*UpdateInfo, error) {
 	}, nil
 }
 
-// FetchReleaseNotes fetches release notes for a specific version (or latest if empty)
-func FetchReleaseNotes(version string) (string, string, error) {
+// FetchReleaseNotes fetches the latest `count` releases, returned oldest-first
+func FetchReleaseNotes(count int) ([]ReleaseEntry, error) {
 	client := &http.Client{Timeout: 5 * time.Second}
 
-	url := apiBase + "/releases/latest"
-	if version != "" {
-		v := version
-		if !strings.HasPrefix(v, "v") {
-			v = "v" + v
-		}
-		url = apiBase + "/releases/tags/" + v
-	}
+	url := fmt.Sprintf("%s/releases?per_page=%d", apiBase, count)
 
 	resp, err := client.Get(url)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to fetch release notes: %w", err)
+		return nil, fmt.Errorf("failed to fetch release notes: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("release not found (status %d)", resp.StatusCode)
+		return nil, fmt.Errorf("failed to fetch releases (status %d)", resp.StatusCode)
 	}
 
-	var release githubRelease
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return "", "", fmt.Errorf("failed to parse release: %w", err)
+	var releases []githubRelease
+	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
+		return nil, fmt.Errorf("failed to parse releases: %w", err)
 	}
 
-	return release.Body, release.HTMLURL, nil
+	// GitHub returns newest first; reverse so oldest is at top
+	result := make([]ReleaseEntry, len(releases))
+	for i, r := range releases {
+		result[len(releases)-1-i] = ReleaseEntry{
+			TagName: r.TagName,
+			Body:    r.Body,
+			HTMLURL: r.HTMLURL,
+		}
+	}
+	return result, nil
 }
 
 // IsNewer returns true if latest version is newer than current
