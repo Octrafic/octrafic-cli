@@ -1,13 +1,6 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/dark-logo.png">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/light-logo.png">
-  <img alt="Octrafic" src="./assets/light-logo.png">
-</picture>
-
-AI-powered CLI tool for API testing and exploration.
-Chat naturally with your APIs - no scripts, no configuration files, just conversation.
-
 ![Screenshot](./assets/screenshot.png)
+
+Open source CLI tool for automated API testing and reporting. Test your APIs by describing what you want in natural language.
 
 ## Install
 
