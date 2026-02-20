@@ -112,11 +112,7 @@ func FetchReleaseNotes(count int) ([]ReleaseEntry, error) {
 
 	result := make([]ReleaseEntry, len(releases))
 	for i, r := range releases {
-		result[len(releases)-1-i] = ReleaseEntry{
-			TagName: r.TagName,
-			Body:    r.Body,
-			HTMLURL: r.HTMLURL,
-		}
+		result[len(releases)-1-i] = ReleaseEntry(r)
 	}
 	return result, nil
 }
