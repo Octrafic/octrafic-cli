@@ -1,4 +1,8 @@
-![Banner](./assets/banner.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/dark-logo.png">
+  <source media="(prefers-color-scheme: light)" srcset="./assets/light-logo.png">
+  <img alt="Octrafic" src="./assets/light-logo.png">
+</picture>
 
 AI-powered CLI tool for API testing and exploration.
 Chat naturally with your APIs - no scripts, no configuration files, just conversation.
