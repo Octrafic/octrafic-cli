@@ -27,7 +27,7 @@ iex (iwr -useb https://octrafic.com/install.ps1)
 ## Quick Start
 
 ```bash
-octrafic -u https://api.example.com -s openapi.json
+octrafic
 ```
 
 ## Documentation
