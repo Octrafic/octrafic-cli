@@ -110,7 +110,6 @@ func FetchReleaseNotes(count int) ([]ReleaseEntry, error) {
 		return nil, fmt.Errorf("failed to parse releases: %w", err)
 	}
 
-	// GitHub returns newest first; reverse so oldest is at top
 	result := make([]ReleaseEntry, len(releases))
 	for i, r := range releases {
 		result[len(releases)-1-i] = ReleaseEntry{
