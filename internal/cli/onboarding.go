@@ -164,9 +164,10 @@ func (m OnboardingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				url := m.serverURLInput.Value()
 				if url == "" {
-					if m.provider == "ollama" {
+					switch m.provider {
+					case "ollama":
 						url = "http://localhost:11434"
-					} else if m.provider == "llamacpp" {
+					case "llamacpp":
 						url = "http://localhost:8080"
 					}
 				}
