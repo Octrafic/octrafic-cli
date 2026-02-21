@@ -12,7 +12,18 @@ import (
 // handleGenerateTestPlanResult processes the generated test plan from the agent.
 func handleGenerateTestPlanResult(m *TestUIModel, msg generateTestPlanResultMsg) (tea.Model, tea.Cmd) {
 	testCases := make([]map[string]any, 0, len(msg.backendTests))
-	for _, bt := range msg.backendTests {
+	m.tests = make([]Test, 0, len(msg.backendTests))
+	for i, bt := range msg.backendTests {
+		m.tests = append(m.tests, Test{
+			ID:          i + 1,
+			Method:      bt.TestCase.Method,
+			Endpoint:    bt.TestCase.Endpoint,
+			Description: fmt.Sprintf("%s %s", bt.TestCase.Method, bt.TestCase.Endpoint),
+			Status:      "pending",
+			Selected:    true,
+			BackendTest: &bt.TestCase,
+		})
+
 		testCases = append(testCases, map[string]any{
 			"method":        bt.TestCase.Method,
 			"endpoint":      bt.TestCase.Endpoint,

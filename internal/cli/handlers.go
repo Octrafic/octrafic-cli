@@ -786,13 +786,20 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 		tests = make([]exporter.TestData, 0, len(m.tests))
 		for _, test := range m.tests {
 			requiresAuth := false
+			var headers map[string]string
+			var body interface{}
+
 			if test.BackendTest != nil {
 				requiresAuth = test.BackendTest.RequiresAuth
+				headers = test.BackendTest.Headers
+				body = test.BackendTest.Body
 			}
 			testData := exporter.TestData{
 				Method:       test.Method,
 				Endpoint:     test.Endpoint,
 				RequiresAuth: requiresAuth,
+				Headers:      headers,
+				Body:         body,
 			}
 			tests = append(tests, testData)
 		}

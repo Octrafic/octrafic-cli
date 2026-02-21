@@ -155,7 +155,7 @@ func getMainAgentTools() []common.Tool {
 		},
 		{
 			Name:        "ExportTests",
-			Description: "Export executed API tests to files in the specified formats. Call this ONLY when the user explicitly requests to save/export tests. Do NOT call this automatically after test execution. Can export to multiple formats at once.",
+			Description: "Export API tests to files in the specified formats. Can export either executed tests or generated test plans (even if they haven't been executed yet). Call this ONLY when the user explicitly requests to save/export. Can export to multiple formats at once.",
 			InputSchema: map[string]any{
 				"type":                 "object",
 				"additionalProperties": false,
