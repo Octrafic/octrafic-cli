@@ -30,8 +30,11 @@ func CreateProvider(config common.ProviderConfig) (common.Provider, error) {
 			config.BaseURL = ensureV1Suffix(config.BaseURL)
 		}
 		return openai.NewOpenAIProvider(config)
+	case "custom":
+		config.BaseURL = ensureV1Suffix(config.BaseURL)
+		return openai.NewOpenAIProvider(config)
 	default:
-		return nil, fmt.Errorf("unsupported provider: %s (supported: claude, anthropic, openai, openrouter, ollama, llamacpp)", config.Provider)
+		return nil, fmt.Errorf("unsupported provider: %s (supported: claude, anthropic, openai, openrouter, ollama, llamacpp, custom)", config.Provider)
 	}
 }
 

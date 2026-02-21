@@ -19,28 +19,31 @@ const (
 	OnboardingProvider
 	OnboardingAPIKey
 	OnboardingServerURL
+	OnboardingCustomAPIKey
 	OnboardingSelectModel
+	OnboardingManualModel
 	OnboardingComplete
 )
 
 // OnboardingModel handles the onboarding flow
 type OnboardingModel struct {
-	state            OnboardingState
-	provider         string
-	selectedProvider int // 0 = anthropic, 1 = openrouter, 2 = openai, 3 = ollama, 4 = llamacpp
-	apiKey           string
-	apiKeyInput      textinput.Model
-	serverURL        string
-	serverURLInput   textinput.Model
-	models           []string
-	filteredModels   []string // Filtered list based on search
-	selectedModel    int
-	modelSearchInput textinput.Model
-	errorMsg         string
-	isTestingKey     bool
-	width            int
-	height           int
-	completed        bool // true if user finished onboarding successfully
+	state              OnboardingState
+	provider           string
+	selectedProvider   int
+	apiKey             string
+	apiKeyInput        textinput.Model
+	serverURL          string
+	serverURLInput     textinput.Model
+	models             []string
+	filteredModels     []string // Filtered list based on search
+	selectedModel      int
+	modelSearchInput   textinput.Model
+	manualModelInput   textinput.Model
+	errorMsg           string
+	isTestingKey       bool
+	width              int
+	height             int
+	completed          bool // true if user finished onboarding successfully
 }
 
 // OnboardingMsg signals state transitions
@@ -58,7 +61,6 @@ type KeyTestResult struct {
 
 // NewOnboardingModel creates the initial onboarding model
 func NewOnboardingModel() OnboardingModel {
-	// API key input
 	ti := textinput.New()
 	ti.Placeholder = "sk-ant-..."
 	ti.CharLimit = 200
@@ -66,17 +68,20 @@ func NewOnboardingModel() OnboardingModel {
 	ti.EchoMode = textinput.EchoPassword
 	ti.EchoCharacter = '•'
 
-	// Server URL input (for local providers)
 	serverURLInput := textinput.New()
 	serverURLInput.Placeholder = "http://localhost:11434"
 	serverURLInput.CharLimit = 200
 	serverURLInput.Width = 50
 
-	// Model search input
 	searchInput := textinput.New()
 	searchInput.Placeholder = "Search models..."
 	searchInput.CharLimit = 100
 	searchInput.Width = 50
+
+	manualInput := textinput.New()
+	manualInput.Placeholder = "e.g. llama-3.3-70b-versatile"
+	manualInput.CharLimit = 200
+	manualInput.Width = 50
 
 	return OnboardingModel{
 		state:            OnboardingWelcome,
@@ -87,6 +92,7 @@ func NewOnboardingModel() OnboardingModel {
 		apiKeyInput:      ti,
 		serverURLInput:   serverURLInput,
 		modelSearchInput: searchInput,
+		manualModelInput: manualInput,
 		selectedProvider: 0, // Default to Anthropic
 	}
 }
@@ -106,10 +112,8 @@ func (m *OnboardingModel) filterModels() {
 	query := strings.ToLower(m.modelSearchInput.Value())
 
 	if query == "" {
-		// No filter - show all models
 		m.filteredModels = m.models
 	} else {
-		// Filter models case-insensitively
 		m.filteredModels = []string{}
 		for _, model := range m.models {
 			if strings.Contains(strings.ToLower(model), query) {
@@ -118,7 +122,6 @@ func (m *OnboardingModel) filterModels() {
 		}
 	}
 
-	// Reset selection if out of bounds
 	if m.selectedModel >= len(m.filteredModels) {
 		m.selectedModel = 0
 		if len(m.filteredModels) > 0 {
@@ -133,9 +136,7 @@ func (m OnboardingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		// Special handling for API key state - let textinput handle typing first
 		if m.state == OnboardingAPIKey {
-			// Handle special keys first
 			switch msg.String() {
 			case "enter":
 				if len(m.apiKeyInput.Value()) > 0 {
@@ -146,7 +147,6 @@ func (m OnboardingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			case "esc":
-				// Clear input and go back
 				m.apiKeyInput.SetValue("")
 				m.errorMsg = ""
 				m.state = OnboardingProvider
@@ -154,27 +154,30 @@ func (m OnboardingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "ctrl+c":
 				return m, tea.Quit
 			default:
-				// Let textinput handle normal typing
 				m.apiKeyInput, cmd = m.apiKeyInput.Update(msg)
 				return m, cmd
 			}
 		}
 
-		// Special handling for server URL state (local providers)
 		if m.state == OnboardingServerURL {
 			switch msg.String() {
 			case "enter":
 				url := m.serverURLInput.Value()
 				if url == "" {
-					// Use placeholder as default
 					if m.provider == "ollama" {
 						url = "http://localhost:11434"
-					} else {
+					} else if m.provider == "llamacpp" {
 						url = "http://localhost:8080"
 					}
 				}
 				m.serverURL = url
 				m.errorMsg = ""
+				if m.provider == "custom" {
+					m.apiKeyInput.SetValue("")
+					m.state = OnboardingCustomAPIKey
+					m.apiKeyInput.Focus()
+					return m, nil
+				}
 				m.isTestingKey = true
 				return m, m.testServerConnection()
 			case "esc":
@@ -190,9 +193,54 @@ func (m OnboardingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Special handling for model selection state - let textinput handle typing
+		if m.state == OnboardingManualModel {
+			switch msg.String() {
+			case "enter":
+				if len(m.manualModelInput.Value()) > 0 {
+					m.models = []string{m.manualModelInput.Value()}
+					m.filteredModels = m.models
+					m.selectedModel = 0
+					m.state = OnboardingSelectModel
+					m.modelSearchInput.Focus()
+					return m, nil
+				}
+				return m, nil
+			case "esc":
+				m.manualModelInput.SetValue("")
+				m.errorMsg = ""
+				m.state = OnboardingCustomAPIKey
+				m.apiKeyInput.Focus()
+				return m, nil
+			case "ctrl+c":
+				return m, tea.Quit
+			default:
+				m.manualModelInput, cmd = m.manualModelInput.Update(msg)
+				return m, cmd
+			}
+		}
+
+		if m.state == OnboardingCustomAPIKey {
+			switch msg.String() {
+			case "enter":
+				m.apiKey = m.apiKeyInput.Value()
+				m.errorMsg = ""
+				m.isTestingKey = true
+				return m, m.testCustomConnection()
+			case "esc":
+				m.apiKeyInput.SetValue("")
+				m.errorMsg = ""
+				m.state = OnboardingServerURL
+				m.serverURLInput.Focus()
+				return m, nil
+			case "ctrl+c":
+				return m, tea.Quit
+			default:
+				m.apiKeyInput, cmd = m.apiKeyInput.Update(msg)
+				return m, cmd
+			}
+		}
+
 		if m.state == OnboardingSelectModel {
-			// Handle special keys first
 			switch msg.String() {
 			case "up", "k":
 				if m.selectedModel > 0 {
@@ -217,22 +265,24 @@ func (m OnboardingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if config.IsLocalProvider(m.provider) {
 					m.state = OnboardingServerURL
 					m.serverURLInput.Focus()
+				} else if m.provider == "custom" {
+					m.state = OnboardingCustomAPIKey
+					m.apiKeyInput.Focus()
 				} else {
 					m.apiKeyInput.SetValue("")
 					m.state = OnboardingAPIKey
+					m.apiKeyInput.Focus()
 				}
 				return m, nil
 			case "ctrl+c":
 				return m, tea.Quit
 			default:
-				// Let textinput handle normal typing for search
 				m.modelSearchInput, cmd = m.modelSearchInput.Update(msg)
 				m.filterModels()
 				return m, cmd
 			}
 		}
 
-		// For other states, use handleKeyPress
 		return m.handleKeyPress(msg)
 
 	case OnboardingMsg:
@@ -242,14 +292,18 @@ func (m OnboardingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.isTestingKey = false
 		if msg.Success {
 			m.models = msg.Models
-			m.filteredModels = msg.Models // Initially show all
+			m.filteredModels = msg.Models
 			m.state = OnboardingSelectModel
 			m.modelSearchInput.Focus()
 			if len(m.models) > 0 {
 				m.selectedModel = 0
 			}
+		} else if m.provider == "custom" {
+			m.manualModelInput.SetValue("")
+			m.errorMsg = fmt.Sprintf("%s (provider: %s)", msg.Error, msg.Provider)
+			m.state = OnboardingManualModel
+			m.manualModelInput.Focus()
 		} else {
-			// Show error with provider info for debugging
 			m.errorMsg = fmt.Sprintf("%s (provider: %s)", msg.Error, msg.Provider)
 		}
 
@@ -278,7 +332,7 @@ func (m *OnboardingModel) handleKeyPress(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd)
 				m.selectedProvider--
 			}
 		case "down", "j":
-			if m.selectedProvider < 4 { // 0=anthropic, 1=openrouter, 2=openai, 3=ollama, 4=llamacpp
+			if m.selectedProvider < 5 {
 				m.selectedProvider++
 			}
 		case "enter":
@@ -303,6 +357,12 @@ func (m *OnboardingModel) handleKeyPress(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd)
 			case 4:
 				m.provider = "llamacpp"
 				m.serverURLInput.SetValue("http://localhost:8080")
+				m.state = OnboardingServerURL
+				m.serverURLInput.Focus()
+			case 5:
+				m.provider = "custom"
+				m.serverURLInput.SetValue("")
+				m.serverURLInput.Placeholder = "https://api.groq.com/openai"
 				m.state = OnboardingServerURL
 				m.serverURLInput.Focus()
 			}
@@ -409,6 +469,49 @@ func (m *OnboardingModel) testServerConnection() tea.Cmd {
 	}
 }
 
+func (m *OnboardingModel) testCustomConnection() tea.Cmd {
+	provider := m.provider
+	serverURL := m.serverURL
+	apiKey := m.apiKey
+
+	return func() tea.Msg {
+		cfg := &config.Config{
+			Provider: provider,
+			BaseURL:  serverURL,
+			APIKey:   apiKey,
+		}
+
+		result := <-func() <-chan tea.Msg {
+			ch := make(chan tea.Msg, 1)
+			go func() {
+				cmd := FetchModelsForProvider(cfg)
+				ch <- cmd()
+			}()
+			return ch
+		}()
+
+		if msg, ok := result.(ModelsFetchedMsg); ok {
+			if msg.Error != "" {
+				return KeyTestResult{
+					Success:  false,
+					Error:    msg.Error,
+					Provider: msg.Provider,
+				}
+			}
+			return KeyTestResult{
+				Success:  true,
+				Models:   msg.Models,
+				Provider: msg.Provider,
+			}
+		}
+		return KeyTestResult{
+			Success:  false,
+			Error:    "Unexpected response type",
+			Provider: provider,
+		}
+	}
+}
+
 func (m *OnboardingModel) saveConfig() tea.Cmd {
 	return func() tea.Msg {
 		cfg := config.Config{
@@ -438,6 +541,10 @@ func (m OnboardingModel) View() string {
 		return m.renderAPIKey()
 	case OnboardingServerURL:
 		return m.renderServerURL()
+	case OnboardingCustomAPIKey:
+		return m.renderCustomAPIKey()
+	case OnboardingManualModel:
+		return m.renderManualModel()
 	case OnboardingSelectModel:
 		return m.renderModel()
 	case OnboardingComplete:
@@ -500,7 +607,7 @@ func (m OnboardingModel) renderProvider() string {
 		Foreground(Theme.TextMuted).
 		Render("Let's configure your AI provider")
 
-	providers := []string{"Anthropic", "OpenRouter", "OpenAI", "Ollama (local)", "llama.cpp (local)"}
+	providers := []string{"Anthropic", "OpenRouter", "OpenAI", "Ollama (local)", "llama.cpp (local)", "Custom (OpenAI-compatible)"}
 	var providerItems []string
 
 	for i, provider := range providers {
@@ -552,6 +659,8 @@ func providerDisplayName(provider string) string {
 		return "Ollama"
 	case "llamacpp":
 		return "llama.cpp"
+	case "custom":
+		return "Custom (OpenAI-compatible)"
 	default:
 		return provider
 	}
@@ -735,6 +844,103 @@ func (m OnboardingModel) renderComplete() string {
 		"",
 		pressKey,
 	)
+
+	return lipgloss.Place(m.width, m.height,
+		lipgloss.Center, lipgloss.Center,
+		content,
+	)
+}
+
+func (m OnboardingModel) renderManualModel() string {
+	title := lipgloss.NewStyle().
+		Foreground(Theme.Primary).
+		Bold(true).
+		Render("Enter Model Name")
+
+	urlLabel := lipgloss.NewStyle().
+		Foreground(Theme.TextMuted).
+		Render("URL: ") +
+		lipgloss.NewStyle().
+			Foreground(Theme.Primary).
+			Render(m.serverURL)
+
+	var errorLine string
+	if m.errorMsg != "" {
+		errorLine = lipgloss.NewStyle().Foreground(Theme.Error).Render("Could not fetch models: " + m.errorMsg)
+	}
+
+	hint := lipgloss.NewStyle().
+		Foreground(Theme.TextMuted).
+		Render("Type the model name manually:")
+
+	help := lipgloss.NewStyle().
+		Foreground(Theme.TextSubtle).
+		Render("Enter to confirm • ESC to go back")
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		"",
+		title,
+		"",
+		urlLabel,
+		"",
+	)
+
+	if errorLine != "" {
+		content = lipgloss.JoinVertical(lipgloss.Left, content, errorLine, "")
+	}
+
+	content = lipgloss.JoinVertical(lipgloss.Left, content, "", hint, "", m.manualModelInput.View(), "", "", help)
+
+	return lipgloss.Place(m.width, m.height,
+		lipgloss.Center, lipgloss.Center,
+		content,
+	)
+}
+
+func (m OnboardingModel) renderCustomAPIKey() string {
+	title := lipgloss.NewStyle().
+		Foreground(Theme.Primary).
+		Bold(true).
+		Render("Enter API Key (optional)")
+
+	urlLabel := lipgloss.NewStyle().
+		Foreground(Theme.TextMuted).
+		Render("URL: ") +
+		lipgloss.NewStyle().
+			Foreground(Theme.Primary).
+			Render(m.serverURL)
+
+	input := m.renderMaskedKey()
+
+	var statusLine string
+	if m.isTestingKey {
+		spinner := lipgloss.NewStyle().Foreground(Theme.Primary).Render("⠋")
+		statusLine = spinner + " " + lipgloss.NewStyle().Foreground(Theme.TextMuted).Render("Testing connection...")
+	} else if m.errorMsg != "" {
+		statusLine = lipgloss.NewStyle().Foreground(Theme.Error).Render("✗ " + m.errorMsg)
+	}
+
+	help := lipgloss.NewStyle().
+		Foreground(Theme.TextSubtle).
+		Render("Enter to connect (empty = no auth) • ESC to go back")
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		"",
+		title,
+		"",
+		urlLabel,
+		"",
+		"",
+		input,
+	)
+
+	if statusLine != "" {
+		content = lipgloss.JoinVertical(lipgloss.Left, content, "", statusLine)
+	}
+
+	content = lipgloss.JoinVertical(lipgloss.Left, content, "", "", help)
 
 	return lipgloss.Place(m.width, m.height,
 		lipgloss.Center, lipgloss.Center,

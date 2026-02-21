@@ -141,6 +141,11 @@ func FetchModelsForProvider(cfg *config.Config) tea.Cmd {
 				}
 			}
 			models, err = fetchLocalModelsList(baseURL)
+		case "custom":
+			if cfg.BaseURL == "" {
+				return ModelsFetchedMsg{Error: "No base URL configured for custom provider", Provider: cfg.Provider}
+			}
+			models, err = fetchCustomModelsList(cfg.BaseURL, cfg.APIKey)
 		default:
 			return ModelsFetchedMsg{Error: "Unknown provider: " + cfg.Provider, Provider: cfg.Provider}
 		}
@@ -298,6 +303,51 @@ func fetchOpenAIModelsList(apiKey string) ([]string, error) {
 
 	if len(modelIDs) == 0 {
 		return nil, fmt.Errorf("no chat models found")
+	}
+
+	return modelIDs, nil
+}
+
+func fetchCustomModelsList(baseURL, apiKey string) ([]string, error) {
+	url := strings.TrimSuffix(baseURL, "/") + "/v1/models"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	if apiKey != "" {
+		req.Header.Add("Authorization", "Bearer "+apiKey)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("could not connect to server at %s: %w", baseURL, err)
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	if res.StatusCode != 200 {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("server returned status %d: %s", res.StatusCode, string(body))
+	}
+
+	var response struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+
+	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	var modelIDs []string
+	for _, model := range response.Data {
+		modelIDs = append(modelIDs, model.ID)
+	}
+
+	if len(modelIDs) == 0 {
+		return nil, fmt.Errorf("no models found on server")
 	}
 
 	return modelIDs, nil
