@@ -1,222 +1,154 @@
-# AGENTS.md - Agent Coding Guidelines
-
-This file provides guidelines for agentic coding agents working in this repository.
+# AGENTS.md — Octrafic CLI
 
 ## Project Overview
 
-Octrafic is a Go CLI application (Go 1.26+) that provides an interactive TUI for API testing using AI agents. It uses:
-- **spf13/cobra** for CLI commands
-- **charmbracelet/bubbletea** for TUI
-- **anthropics/anthropic-sdk-go** for LLM integration
-- **go.uber.org/zap** for structured logging
+Octrafic is an open-source CLI tool for automated API testing and reporting, written in Go. Users describe what they want to test in natural language, and an LLM agent generates test plans, executes them against live endpoints, and exports results in multiple formats (Postman, Pytest, Curl). The CLI features an interactive TUI built with BubbleTea, supports multiple LLM providers (Claude, OpenAI, Ollama, Llama.cpp), and can run in headless mode for CI/CD pipelines.
 
-## Build, Lint, and Test Commands
-
-### Build
-```bash
-go build -o octrafic ./cmd/octrafic
-```
-
-### Run Application
-```bash
-go run ./cmd/octrafic
-```
-
-### Run All Tests
-```bash
-go test ./...
-```
-
-### Run Single Test
-```bash
-go test -v ./internal/config        # Run tests in config package
-go test -v -run TestShouldCheckForUpdate ./internal/config  # Run specific test
-```
-
-### Lint
-```bash
-golangci-lint run ./...
-```
-
-The project uses golangci-lint v2.9.0 with these enabled linters:
-- errcheck
-- govet
-- ineffassign
-- staticcheck
-- unused
-
-And formatter:
-- gofmt
-
-### Format Code
-```bash
-gofmt -w .
-```
+**Stack:** Go 1.26 · BubbleTea (TUI) · LLM providers (Claude/OpenAI/Ollama) · GoReleaser · golangci-lint v2
 
 ---
 
-## Code Style Guidelines
+## Architecture
 
-### General Principles
-- Follow standard Go conventions (Effective Go, Go Code Review Comments)
-- Write clear, self-documenting code
-- Keep functions focused and small
-- Handle errors explicitly with helpful messages
-
-### Naming Conventions
-- **Files**: Use lowercase with underscores (e.g., `config.go`, `auth_test.go`)
-- **Types/Interfaces**: PascalCase (e.g., `Config`, `Agent`)
-- **Functions/Variables**: camelCase (e.g., `loadConfig`, `userInput`)
-- **Constants**: PascalCase or SCREAMING_SNAKE_CASE for exported (e.g., `MaxRetries`)
-- **Private functions**: camelCase starting with lowercase (e.g., `handleKey`)
-- **Interfaces**: Add `er` suffix for interfaces (e.g., `Reader`, `Writer`)
-
-### Package Structure
 ```
+cmd/octrafic/          → Entry point (main.go, root command)
 internal/
-├── agents/       # Agent implementations
-├── cli/          # CLI commands and TUI
-├── config/       # Configuration management
-├── core/         # Business logic (analyzer, auth, converter, parser, reporter, tester)
-├── infra/        # Infrastructure (logger, storage)
-├── llm/          # LLM provider implementations
-└── updater/      # Auto-update functionality
+├── agents/            → LLM agent orchestration (tool definitions, chat protocol, test planning)
+├── cli/               → TUI layer (BubbleTea models, views, update loops, handlers)
+│   ├── tui.go         → Main TestUIModel struct and View()
+│   ├── update.go      → Core Update() loop and tool call dispatch
+│   ├── handlers.go    → Tool execution handlers, sendChatMessage()
+│   ├── update_tests.go→ Test-specific message handlers
+│   ├── theme.go       → Color theme definitions
+│   └── wizard.go      → Onboarding wizard flow
+├── config/            → App configuration and provider settings
+├── core/
+│   ├── analyzer/      → OpenAPI spec analysis
+│   ├── auth/          → Authentication strategies (Bearer, API Key, Basic)
+│   ├── converter/     → JSON extraction and data conversion
+│   ├── parser/        → Spec file parsing (OpenAPI, Postman, GraphQL, Markdown)
+│   ├── reporter/      → PDF report generation
+│   └── tester/        → HTTP test execution engine
+├── exporter/          → Test export formats (Postman JSON, Pytest, Curl)
+├── infra/
+│   ├── logger/        → Structured logging
+│   └── storage/       → Project and endpoint persistence
+├── llm/               → LLM provider abstraction
+│   ├── factory.go     → Provider factory (creates Claude/OpenAI/Ollama clients)
+│   ├── claude/        → Anthropic Claude client implementation
+│   ├── openai/        → OpenAI-compatible client implementation
+│   └── common/        → Shared LLM types
+├── runner/            → CLI command runner
+├── ui/textarea/       → Custom textarea widget
+└── updater/           → Self-update mechanism
 ```
 
-### Import Organization
-Group imports in this order with blank lines between groups:
-1. Standard library
-2. External packages (third-party)
-3. Internal packages (project-local)
+**Data flow:** User input → `cli/update.go` (BubbleTea Update loop) → `agents/` (LLM orchestration) → `llm/` (provider API call) → tool calls dispatched via `cli/handlers.go` → `core/` modules execute → results rendered in `cli/tui.go`
 
-```go
-import (
-    "encoding/json"
-    "fmt"
-    "time"
-
-    "github.com/anthropics/anthropic-sdk-go"
-    "github.com/charmbracelet/bubbletea"
-
-    "github.com/Octrafic/octrafic-cli/internal/agents"
-    "github.com/Octrafic/octrafic-cli/internal/config"
-)
-```
-
-### Error Handling
-- Always handle errors explicitly
-- Return meaningful error messages
-- Use wrapped errors with `fmt.Errorf("...: %w", err)` for context
-- Check errors where they occur, don't ignore with `_`
-
-```go
-// Good
-if err != nil {
-    return nil, fmt.Errorf("failed to load config: %w", err)
-}
-
-// Avoid
-data, _ := os.ReadFile(path)  // Never ignore errors
-```
-
-### Type Definitions
-- Use explicit struct types rather than generic maps where possible
-- Use interfaces to define abstractions
-- Document exported types with comments
-
-```go
-// Config holds the application configuration
-type Config struct {
-    Provider string `json:"provider"`
-    APIKey   string `json:"api_key,omitempty"`
-}
-```
-
-### Testing
-- Tests should be in `*_test.go` files in the same package
-- Use table-driven tests for multiple test cases
-- Name test functions: `Test<Function>_<Scenario>`
-- Use descriptive test names
-
-```go
-func TestIsLocalProvider(t *testing.T) {
-    tests := []struct {
-        provider string
-        expected bool
-    }{
-        {"ollama", true},
-        {"claude", false},
-    }
-
-    for _, tt := range tests {
-        got := IsLocalProvider(tt.provider)
-        if got != tt.expected {
-            t.Errorf("IsLocalProvider(%q) = %v, want %v", tt.provider, got, tt.expected)
-        }
-    }
-}
-```
-
-### Logging
-- Use the project's logging infrastructure in `internal/infra/logger`
-- Use structured logging with zap
-- Include relevant context in log messages
-
-```go
-logger.Debug("Processing request", logger.String("id", requestID))
-logger.Error("Failed to connect", logger.String("error", err.Error()))
-```
-
-### TUI Development
-- Use Bubble Tea patterns (Model, Update, View)
-- Handle tea.Msg with type switches
-- Return tea.Model and tea.Cmd from Update
-- Use tea.Batch for multiple commands
-
-### Commits
-Use conventional commits:
-- `feat:` new feature
-- `fix:` bug fix
-- `docs:` documentation
-- `refactor:` code refactoring
-- `test:` adding tests
-- `chore:` maintenance
-
-Example: `feat: add model selector to TUI`
+**Key entry points:**
+- `cmd/octrafic/main.go` — CLI bootstrap
+- `internal/cli/tui.go` — TUI model definition (`TestUIModel`)
+- `internal/cli/update.go` — Main message dispatch (`handleProcessToolCalls`)
+- `internal/agents/chat.go` — Tool definitions and system prompt
 
 ---
 
-## Key Files to Know
+## Commands
 
-- `cmd/octrafic/main.go` - Entry point
-- `internal/cli/tui.go` - Main TUI model and update loop
-- `internal/config/config.go` - Configuration handling
-- `internal/agents/` - Agent implementations
-- `internal/infra/storage/` - Data persistence
-
----
-
-## Common Tasks
-
-### Running the CLI
 ```bash
-go run ./cmd/octrafic [command] [flags]
+# Development
+GOTOOLCHAIN=auto go build -o octrafic-cli ./cmd/octrafic   # Build binary
+./octrafic-cli test -s spec.json -u https://api.example.com # Run with spec
+
+# Full local CI (lint + tests + build)
+./check.sh
+
+# Individual checks
+golangci-lint run           # Lint (requires golangci-lint v2)
+go test -v ./...            # Unit tests
+go vet ./...                # Go vet
+
+# Headless mode (CI/CD)
+./octrafic-cli test -s spec.json -u https://api.example.com --auto --prompt "your instructions"
 ```
 
-### Adding a New Command
-1. Add command to `internal/cli/` or create new file
-2. Register in main.go with cobra
-3. Add tests
-
-### Adding a New LLM Provider
-1. Implement provider interface in `internal/llm/`
-2. Add factory registration in `internal/llm/factory.go`
+> **Important:** Always set `GOTOOLCHAIN=auto` when building locally if your Go version is older than 1.26. The `check.sh` script handles this automatically.
 
 ---
 
-## Dependencies
+## Code Style
 
-Go 1.26+ is required. Dependencies are managed via go modules:
-```bash
-go mod download
+### Naming
+- **Packages:** lowercase, single word (`agents`, `exporter`, `storage`)
+- **Files:** `snake_case.go` — e.g. `update_tests.go`, `file_picker.go`
+- **Types:** `PascalCase` — e.g. `TestUIModel`, `ChatResponse`, `ExportRequest`
+- **Functions:** `PascalCase` for exported, `camelCase` for unexported
+- **Constants:** `PascalCase` — e.g. `StateIdle`, `ModeAutoExecute`
+- **BubbleTea messages:** `camelCase` ending with `Msg` — e.g. `processToolCallsMsg`, `toolResultMsg`
+
+### Formatting
+- `gofmt` is enforced via golangci-lint
+- Use `fmt.Fprintf(&builder, ...)` instead of `builder.WriteString(fmt.Sprintf(...))`
+- Handle all errors explicitly — never use `_` for error returns unless the function genuinely cannot fail
+- Group imports: stdlib → external packages → internal packages
+
+### Forbidden
+- ❌ `panic()` in production code
+- ❌ Global mutable state
+- ❌ `init()` functions for anything beyond registering exporters
+- ❌ `WriteString(fmt.Sprintf(...))` — use `fmt.Fprintf` instead (enforced by staticcheck QF1012)
+
+---
+
+## Git Workflow
+
+### Branches
 ```
+main                              # Protected, production-ready
+feature/short-description         # New features
+fix/short-description             # Bug fixes
+chore/short-description           # Maintenance, refactoring, tooling
+```
+
+### Commits — Conventional Commits
+```
+feat: add support for GraphQL specs
+fix: resolve headless mode exit hang
+chore: update golangci-lint to v2
+docs: improve authentication guide
+refactor: extract test runner into separate package
+test: add parser edge case coverage
+```
+
+### Process
+1. Branch from `main` — never commit directly to `main`
+2. Run `./check.sh` before pushing — all lint, tests, and build must pass
+3. Push branch → open Pull Request → CI validates on GitHub Actions
+4. Merge via GitHub PR (squash or merge commit — no rebase required)
+
+---
+
+## Agent Boundaries
+
+### ✅ Do freely
+- Read any file in the repository
+- Edit Go source code, markdown, and config files
+- Run `./check.sh`, `go build`, `go test`, `golangci-lint run`
+- Create new branches from `main`
+- Create commits with conventional commit messages
+- Run the CLI binary in headless mode for testing
+
+### ⚠️ Ask first
+- Pushing to remote (`git push`) — always confirm branch name
+- Creating Pull Requests (`gh pr create`)
+- Modifying `go.mod` or `go.sum` (dependency changes)
+- Changing the CI pipeline (`.github/workflows/`)
+- Modifying the `.goreleaser.yaml` release config
+- Deleting files or branches
+
+### ❌ Never do
+- Push directly to `main`
+- Run `go install` for system-wide tools without confirming
+- Modify files outside the project directory
+- Store secrets, API keys, or tokens in code
+- Skip running `./check.sh` before creating a commit on a PR branch
