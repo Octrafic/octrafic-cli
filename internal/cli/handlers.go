@@ -45,6 +45,12 @@ type startTestGroupMsg struct {
 
 // sendChatMessage initiates a streaming chat request with the agent.
 func (m *TestUIModel) sendChatMessage(_ string) tea.Cmd {
+	if len(m.streamedToolCalls) > 0 {
+		return func() tea.Msg {
+			return processToolCallsMsg{}
+		}
+	}
+
 	return func() tea.Msg {
 		time.Sleep(100 * time.Millisecond)
 
