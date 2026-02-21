@@ -16,15 +16,15 @@ func (e *CurlExporter) Export(req ExportRequest) error {
 	var script strings.Builder
 
 	script.WriteString("#!/bin/bash\n\n")
-	script.WriteString(fmt.Sprintf("# Generated curl commands for %s\n", req.BaseURL))
-	script.WriteString(fmt.Sprintf("BASE_URL=\"%s\"\n\n", req.BaseURL))
+	fmt.Fprintf(&script, "# Generated curl commands for %s\n", req.BaseURL)
+	fmt.Fprintf(&script, "BASE_URL=\"%s\"\n\n", req.BaseURL)
 
 	for i, test := range req.Tests {
 		if i > 0 {
 			script.WriteString("\n")
 		}
 
-		script.WriteString(fmt.Sprintf("# Test %d: %s %s\n", i+1, test.Method, test.Endpoint))
+		fmt.Fprintf(&script, "# Test %d: %s %s\n", i+1, test.Method, test.Endpoint)
 		script.WriteString(e.buildCurlCommand(test, req))
 		script.WriteString("\n")
 	}

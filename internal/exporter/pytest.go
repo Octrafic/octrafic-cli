@@ -17,27 +17,27 @@ func (e *PytestExporter) Export(req ExportRequest) error {
 
 	script.WriteString("import requests\n")
 	script.WriteString("import pytest\n\n")
-	script.WriteString(fmt.Sprintf("BASE_URL = \"%s\"\n\n", req.BaseURL))
+	fmt.Fprintf(&script, "BASE_URL = \"%s\"\n\n", req.BaseURL)
 
 	if req.AuthType != "" {
 		script.WriteString("# Authentication configuration\n")
 		switch req.AuthType {
 		case "bearer":
 			if token, ok := req.AuthData["token"]; ok {
-				script.WriteString(fmt.Sprintf("AUTH_TOKEN = \"%s\"\n", token))
+				fmt.Fprintf(&script, "AUTH_TOKEN = \"%s\"\n", token)
 			}
 		case "apikey":
 			if keyName, ok := req.AuthData["key_name"]; ok {
 				if keyValue, ok := req.AuthData["key_value"]; ok {
-					script.WriteString(fmt.Sprintf("API_KEY_NAME = \"%s\"\n", keyName))
-					script.WriteString(fmt.Sprintf("API_KEY_VALUE = \"%s\"\n", keyValue))
+					fmt.Fprintf(&script, "API_KEY_NAME = \"%s\"\n", keyName)
+					fmt.Fprintf(&script, "API_KEY_VALUE = \"%s\"\n", keyValue)
 				}
 			}
 		case "basic":
 			if username, ok := req.AuthData["username"]; ok {
 				if password, ok := req.AuthData["password"]; ok {
-					script.WriteString(fmt.Sprintf("AUTH_USER = \"%s\"\n", username))
-					script.WriteString(fmt.Sprintf("AUTH_PASS = \"%s\"\n", password))
+					fmt.Fprintf(&script, "AUTH_USER = \"%s\"\n", username)
+					fmt.Fprintf(&script, "AUTH_PASS = \"%s\"\n", password)
 				}
 			}
 		}
@@ -46,13 +46,13 @@ func (e *PytestExporter) Export(req ExportRequest) error {
 
 	for i, test := range req.Tests {
 		funcName := e.buildFunctionName(test, i)
-		script.WriteString(fmt.Sprintf("def %s():\n", funcName))
-		script.WriteString(fmt.Sprintf("    \"\"\"%s %s\"\"\"\n", test.Method, test.Endpoint))
-		script.WriteString(fmt.Sprintf("    url = BASE_URL + \"%s\"\n", test.Endpoint))
+		fmt.Fprintf(&script, "def %s():\n", funcName)
+		fmt.Fprintf(&script, "    \"\"\"%s %s\"\"\"\n", test.Method, test.Endpoint)
+		fmt.Fprintf(&script, "    url = BASE_URL + \"%s\"\n", test.Endpoint)
 
 		script.WriteString("    headers = {\"Content-Type\": \"application/json\"")
 		for key, value := range test.Headers {
-			script.WriteString(fmt.Sprintf(", \"%s\": \"%s\"", key, value))
+			fmt.Fprintf(&script, ", \"%s\": \"%s\"", key, value)
 		}
 		script.WriteString("}\n")
 
@@ -75,25 +75,25 @@ func (e *PytestExporter) Export(req ExportRequest) error {
 		if test.Body != nil {
 			if bodyStr, ok := test.Body.(string); ok {
 				escapedBody := strings.ReplaceAll(bodyStr, "\"", "\\\"")
-				script.WriteString(fmt.Sprintf("    data = \"\"\"%s\"\"\"\n", escapedBody))
-				script.WriteString(fmt.Sprintf("    response = requests.%s(url, headers=headers, data=data, auth=auth)\n", method))
+				fmt.Fprintf(&script, "    data = \"\"\"%s\"\"\"\n", escapedBody)
+				fmt.Fprintf(&script, "    response = requests.%s(url, headers=headers, data=data, auth=auth)\n", method)
 			} else {
-				script.WriteString(fmt.Sprintf("    response = requests.%s(url, headers=headers, auth=auth)\n", method))
+				fmt.Fprintf(&script, "    response = requests.%s(url, headers=headers, auth=auth)\n", method)
 			}
 		} else {
-			script.WriteString(fmt.Sprintf("    response = requests.%s(url, headers=headers, auth=auth)\n", method))
+			fmt.Fprintf(&script, "    response = requests.%s(url, headers=headers, auth=auth)\n", method)
 		}
 
 		script.WriteString("\n")
 
 		if test.StatusCode > 0 {
-			script.WriteString(fmt.Sprintf("    assert response.status_code == %d\n", test.StatusCode))
+			fmt.Fprintf(&script, "    assert response.status_code == %d\n", test.StatusCode)
 		} else {
 			script.WriteString("    assert response.status_code < 500\n")
 		}
 
 		if test.Error != "" {
-			script.WriteString(fmt.Sprintf("    # Note: Test failed with error: %s\n", test.Error))
+			fmt.Fprintf(&script, "    # Note: Test failed with error: %s\n", test.Error)
 		}
 
 		script.WriteString("\n\n")
