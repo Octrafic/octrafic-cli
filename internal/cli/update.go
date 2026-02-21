@@ -1237,123 +1237,104 @@ func showToolWidget(m *TestUIModel, title string, details string) {
 // handleProcessToolCalls executes tool calls received from the agent.
 func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, tea.Cmd) {
 	if len(m.streamedToolCalls) > 0 {
-		for _, toolCall := range m.streamedToolCalls {
-			if toolCall.Name == "get_endpoints_details" {
-				m.streamedToolCalls = nil
-				m.currentTestToolID = toolCall.ID
-				m.currentTestToolName = "get_endpoints_details"
-				m.agentState = StateThinking
+		toolCall := m.streamedToolCalls[0]
+		m.streamedToolCalls = m.streamedToolCalls[1:]
 
-				if endpointsArg, ok := toolCall.Arguments["endpoints"].([]any); ok {
-					var endpointsList []string
-					for _, ep := range endpointsArg {
-						if epMap, ok := ep.(map[string]any); ok {
-							method, _ := epMap["method"].(string)
-							path, _ := epMap["path"].(string)
-							endpointsList = append(endpointsList, fmt.Sprintf("%s %s", method, path))
+		switch toolCall.Name {
+		case "get_endpoints_details":
+			m.currentTestToolID = toolCall.ID
+			m.currentTestToolName = "get_endpoints_details"
+			m.agentState = StateThinking
+
+			if endpointsArg, ok := toolCall.Arguments["endpoints"].([]any); ok {
+				var endpointsList []string
+				for _, ep := range endpointsArg {
+					if epMap, ok := ep.(map[string]any); ok {
+						method, _ := epMap["method"].(string)
+						path, _ := epMap["path"].(string)
+						endpointsList = append(endpointsList, fmt.Sprintf("%s %s", method, path))
+					}
+				}
+				details := strings.Join(endpointsList, ", ")
+				showToolWidget(m, "Getting endpoint details", details)
+			}
+
+			return m, m.executeTool(toolCall)
+
+		case "GenerateTestPlan":
+			what, ok := toolCall.Arguments["what"].(string)
+			if !ok || what == "" {
+				m.addMessage(m.subtleStyle.Render("⚠️  GenerateTestPlan missing 'what' parameter"))
+				return m, func() tea.Msg { return processToolCallsMsg{} }
+			}
+
+			focus, ok := toolCall.Arguments["focus"].(string)
+			if !ok || focus == "" {
+				focus = "happy path"
+			}
+
+			m.currentTestToolID = toolCall.ID
+			m.currentTestToolName = "GenerateTestPlan"
+
+			m.agentState = StateUsingTool
+			m.animationFrame = 0
+			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
+			return m, tea.Batch(
+				animationTick(),
+				func() tea.Msg {
+					if m.localAgent == nil {
+						var err error
+						m.localAgent, err = agent.NewAgent(m.baseURL)
+						if err != nil {
+							return backendErrorMsg{err: fmt.Errorf("failed to initialize agent: %w", err)}
 						}
 					}
-					details := strings.Join(endpointsList, ", ")
-					showToolWidget(m, "Getting endpoint details", details)
-				}
 
-				return m, m.executeTool(toolCall)
-			}
+					tests, _, err := m.localAgent.GenerateTestPlan(what, focus)
+					if err != nil {
+						return backendErrorMsg{err: fmt.Errorf("failed to generate test plan: %w", err)}
+					}
+					return generateTestPlanResultMsg{
+						what:         what,
+						focus:        focus,
+						backendTests: tests,
+					}
+				},
+			)
+
+		case "ExecuteTestGroup":
+			m.currentTestToolID = toolCall.ID
+			m.currentTestToolName = "ExecuteTestGroup"
+
+			m.agentState = StateProcessing
+			return m, m.executeTool(toolCall)
+
+		case "ExportTests":
+			m.currentTestToolID = toolCall.ID
+			m.currentTestToolName = "ExportTests"
+
+			exportsArg, _ := toolCall.Arguments["exports"].([]any)
+			formatCount := len(exportsArg)
+			label := fmt.Sprintf("%d format(s)", formatCount)
+
+			showToolWidget(m, "Exporting tests", label)
+			m.agentState = StateUsingTool
+			m.animationFrame = 0
+			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
+			return m, tea.Batch(animationTick(), m.executeTool(toolCall))
+
+		case "GenerateReport":
+			m.currentTestToolID = toolCall.ID
+			m.currentTestToolName = "GenerateReport"
+
+			showToolWidget(m, "Generating PDF report", "")
+			m.agentState = StateUsingTool
+			m.animationFrame = 0
+			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
+			return m, tea.Batch(animationTick(), m.executeTool(toolCall))
 		}
 
-		for _, toolCall := range m.streamedToolCalls {
-			if toolCall.Name == "GenerateTestPlan" {
-				m.streamedToolCalls = nil
-
-				what, ok := toolCall.Arguments["what"].(string)
-				if !ok || what == "" {
-					m.addMessage(m.subtleStyle.Render("⚠️  GenerateTestPlan missing 'what' parameter"))
-					return m, nil
-				}
-
-				focus, ok := toolCall.Arguments["focus"].(string)
-				if !ok || focus == "" {
-					focus = "happy path"
-				}
-
-				m.currentTestToolID = toolCall.ID
-				m.currentTestToolName = "GenerateTestPlan"
-
-				m.agentState = StateUsingTool
-				m.animationFrame = 0
-				m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
-				return m, tea.Batch(
-					animationTick(),
-					func() tea.Msg {
-						if m.localAgent == nil {
-							var err error
-							m.localAgent, err = agent.NewAgent(m.baseURL)
-							if err != nil {
-								return backendErrorMsg{err: fmt.Errorf("failed to initialize agent: %w", err)}
-							}
-						}
-
-						tests, _, err := m.localAgent.GenerateTestPlan(what, focus)
-						if err != nil {
-							return backendErrorMsg{err: fmt.Errorf("failed to generate test plan: %w", err)}
-						}
-						return generateTestPlanResultMsg{
-							what:         what,
-							focus:        focus,
-							backendTests: tests,
-						}
-					},
-				)
-			}
-		}
-
-		for _, toolCall := range m.streamedToolCalls {
-			if toolCall.Name == "ExecuteTestGroup" {
-				m.streamedToolCalls = nil
-
-				m.currentTestToolID = toolCall.ID
-				m.currentTestToolName = "ExecuteTestGroup"
-
-				m.agentState = StateProcessing
-				return m, m.executeTool(toolCall)
-			}
-		}
-
-		for _, toolCall := range m.streamedToolCalls {
-			if toolCall.Name == "ExportTests" {
-				m.streamedToolCalls = nil
-
-				m.currentTestToolID = toolCall.ID
-				m.currentTestToolName = "ExportTests"
-
-				exportsArg, _ := toolCall.Arguments["exports"].([]any)
-				formatCount := len(exportsArg)
-				label := fmt.Sprintf("%d format(s)", formatCount)
-
-				showToolWidget(m, "Exporting tests", label)
-				m.agentState = StateUsingTool
-				m.animationFrame = 0
-				m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
-				return m, tea.Batch(animationTick(), m.executeTool(toolCall))
-			}
-		}
-
-		for _, toolCall := range m.streamedToolCalls {
-			if toolCall.Name == "GenerateReport" {
-				m.streamedToolCalls = nil
-
-				m.currentTestToolID = toolCall.ID
-				m.currentTestToolName = "GenerateReport"
-
-				showToolWidget(m, "Generating PDF report", "")
-				m.agentState = StateUsingTool
-				m.animationFrame = 0
-				m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
-				return m, tea.Batch(animationTick(), m.executeTool(toolCall))
-			}
-		}
-
-		m.agentState = StateIdle
+		return m, func() tea.Msg { return processToolCallsMsg{} }
 	}
 
 	m.agentState = StateIdle
