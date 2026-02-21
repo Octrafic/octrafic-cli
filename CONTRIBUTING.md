@@ -18,16 +18,20 @@ Thanks for your interest in contributing!
 git clone https://github.com/Octrafic/octrafic-cli.git
 cd octrafic-cli
 go mod download
-go build -o octrafic cmd/octrafic/main.go
+GOTOOLCHAIN=auto go build -o octrafic-cli ./cmd/octrafic
 
-# Run tests
+# Run full local CI (lint + tests + build)
+./check.sh
+
+# Or run checks individually
 go test ./...
+golangci-lint run
 ```
 
 ## Coding Guidelines
 
 - Follow standard Go conventions
-- Use `gofmt` and `golangci-lint`
+- Use `gofmt` and `golangci-lint` (v2)
 - Write clear, self-documenting code
 - Add tests for new functionality
 - Handle errors explicitly with helpful messages
@@ -35,7 +39,7 @@ go test ./...
 ## Pull Request Process
 
 1. Create a branch: `git checkout -b feat/your-feature`
-2. Make changes and test: `go test ./...`
+2. Make changes and verify: `./check.sh` (runs lint, tests, and build)
 3. Commit with clear messages: `feat: add support for X`
 4. Push and open PR with description
 
