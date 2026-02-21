@@ -1240,7 +1240,8 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 		toolCall := m.streamedToolCalls[0]
 		m.streamedToolCalls = m.streamedToolCalls[1:]
 
-		if toolCall.Name == "get_endpoints_details" {
+		switch toolCall.Name {
+		case "get_endpoints_details":
 			m.currentTestToolID = toolCall.ID
 			m.currentTestToolName = "get_endpoints_details"
 			m.agentState = StateThinking
@@ -1260,7 +1261,7 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 
 			return m, m.executeTool(toolCall)
 
-		} else if toolCall.Name == "GenerateTestPlan" {
+		case "GenerateTestPlan":
 			what, ok := toolCall.Arguments["what"].(string)
 			if !ok || what == "" {
 				m.addMessage(m.subtleStyle.Render("⚠️  GenerateTestPlan missing 'what' parameter"))
@@ -1301,14 +1302,14 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 				},
 			)
 
-		} else if toolCall.Name == "ExecuteTestGroup" {
+		case "ExecuteTestGroup":
 			m.currentTestToolID = toolCall.ID
 			m.currentTestToolName = "ExecuteTestGroup"
 
 			m.agentState = StateProcessing
 			return m, m.executeTool(toolCall)
 
-		} else if toolCall.Name == "ExportTests" {
+		case "ExportTests":
 			m.currentTestToolID = toolCall.ID
 			m.currentTestToolName = "ExportTests"
 
@@ -1322,7 +1323,7 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
 			return m, tea.Batch(animationTick(), m.executeTool(toolCall))
 
-		} else if toolCall.Name == "GenerateReport" {
+		case "GenerateReport":
 			m.currentTestToolID = toolCall.ID
 			m.currentTestToolName = "GenerateReport"
 
