@@ -27,23 +27,23 @@ const (
 
 // OnboardingModel handles the onboarding flow
 type OnboardingModel struct {
-	state              OnboardingState
-	provider           string
-	selectedProvider   int
-	apiKey             string
-	apiKeyInput        textinput.Model
-	serverURL          string
-	serverURLInput     textinput.Model
-	models             []string
-	filteredModels     []string // Filtered list based on search
-	selectedModel      int
-	modelSearchInput   textinput.Model
-	manualModelInput   textinput.Model
-	errorMsg           string
-	isTestingKey       bool
-	width              int
-	height             int
-	completed          bool // true if user finished onboarding successfully
+	state            OnboardingState
+	provider         string
+	selectedProvider int
+	apiKey           string
+	apiKeyInput      textinput.Model
+	serverURL        string
+	serverURLInput   textinput.Model
+	models           []string
+	filteredModels   []string // Filtered list based on search
+	selectedModel    int
+	modelSearchInput textinput.Model
+	manualModelInput textinput.Model
+	errorMsg         string
+	isTestingKey     bool
+	width            int
+	height           int
+	completed        bool // true if user finished onboarding successfully
 }
 
 // OnboardingMsg signals state transitions
