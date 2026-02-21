@@ -285,10 +285,10 @@ func (m *ChatModel) listEndpoints() {
 	endpointList.WriteString("Available endpoints:")
 
 	for key, info := range m.analysis.EndpointInfo {
-		endpointList.WriteString(fmt.Sprintf("\n  %s\n", key))
-		endpointList.WriteString(fmt.Sprintf("    Purpose: %s\n", info.Purpose))
+		fmt.Fprintf(&endpointList, "\n  %s\n", key)
+		fmt.Fprintf(&endpointList, "    Purpose: %s\n", info.Purpose)
 		if len(info.TestScenarios) > 0 {
-			endpointList.WriteString(fmt.Sprintf("    Test scenarios: %d\n", len(info.TestScenarios)))
+			fmt.Fprintf(&endpointList, "    Test scenarios: %d\n", len(info.TestScenarios))
 		}
 	}
 
@@ -306,7 +306,7 @@ func (m *ChatModel) showInsights() {
 	insightsList.WriteString("AI Insights:")
 
 	for i, insight := range m.analysis.Insights {
-		insightsList.WriteString(fmt.Sprintf("\n  %d. %s", i+1, insight))
+		fmt.Fprintf(&insightsList, "\n  %d. %s", i+1, insight)
 	}
 
 	m.addSystemMessage(insightsList.String())

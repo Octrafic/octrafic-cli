@@ -390,7 +390,7 @@ func renderTestPlanWithCheckboxes(m *TestUIModel) string {
 		endpoint := lipgloss.NewStyle().Foreground(Theme.Text).Render(test.Endpoint)
 		description := lipgloss.NewStyle().Foreground(Theme.TextMuted).Render(test.Description)
 
-		s.WriteString(fmt.Sprintf("%s %s %s %s → %s\n", indicator, checkbox, method, endpoint, description))
+		fmt.Fprintf(&s, "%s %s %s %s → %s\n", indicator, checkbox, method, endpoint, description)
 	}
 
 	// Help text
