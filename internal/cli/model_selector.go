@@ -308,8 +308,13 @@ func fetchOpenAIModelsList(apiKey string) ([]string, error) {
 	return modelIDs, nil
 }
 
+func stripV1Suffix(baseURL string) string {
+	trimmed := strings.TrimSuffix(baseURL, "/")
+	return strings.TrimSuffix(trimmed, "/v1")
+}
+
 func fetchCustomModelsList(baseURL, apiKey string) ([]string, error) {
-	url := strings.TrimSuffix(baseURL, "/") + "/v1/models"
+	url := stripV1Suffix(baseURL) + "/v1/models"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -354,7 +359,7 @@ func fetchCustomModelsList(baseURL, apiKey string) ([]string, error) {
 }
 
 func fetchLocalModelsList(serverURL string) ([]string, error) {
-	url := strings.TrimSuffix(serverURL, "/") + "/v1/models"
+	url := stripV1Suffix(serverURL) + "/v1/models"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
