@@ -1,6 +1,5 @@
 ![Screenshot](./assets/screenshot.png)
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/Octrafic/octrafic-cli)](https://goreportcard.com/report/github.com/Octrafic/octrafic-cli)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/Octrafic/octrafic-cli)](https://golang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
