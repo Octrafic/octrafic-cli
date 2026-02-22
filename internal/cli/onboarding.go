@@ -333,7 +333,7 @@ func (m *OnboardingModel) handleKeyPress(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd)
 				m.selectedProvider--
 			}
 		case "down", "j":
-			if m.selectedProvider < 5 {
+			if m.selectedProvider < 6 {
 				m.selectedProvider++
 			}
 		case "enter":
@@ -351,16 +351,20 @@ func (m *OnboardingModel) handleKeyPress(keyMsg tea.KeyMsg) (tea.Model, tea.Cmd)
 				m.state = OnboardingAPIKey
 				m.apiKeyInput.Focus()
 			case 3:
+				m.provider = "gemini"
+				m.state = OnboardingAPIKey
+				m.apiKeyInput.Focus()
+			case 4:
 				m.provider = "ollama"
 				m.serverURLInput.SetValue("http://localhost:11434")
 				m.state = OnboardingServerURL
 				m.serverURLInput.Focus()
-			case 4:
+			case 5:
 				m.provider = "llamacpp"
 				m.serverURLInput.SetValue("http://localhost:8080")
 				m.state = OnboardingServerURL
 				m.serverURLInput.Focus()
-			case 5:
+			case 6:
 				m.provider = "custom"
 				m.serverURLInput.SetValue("")
 				m.serverURLInput.Placeholder = "https://api.groq.com/openai"
@@ -608,7 +612,7 @@ func (m OnboardingModel) renderProvider() string {
 		Foreground(Theme.TextMuted).
 		Render("Let's configure your AI provider")
 
-	providers := []string{"Anthropic", "OpenRouter", "OpenAI", "Ollama (local)", "llama.cpp (local)", "Custom (OpenAI-compatible)"}
+	providers := []string{"Anthropic", "OpenRouter", "OpenAI", "Google Gemini", "Ollama (local)", "llama.cpp (local)", "Custom (OpenAI-compatible)"}
 	var providerItems []string
 
 	for i, provider := range providers {
@@ -656,6 +660,8 @@ func providerDisplayName(provider string) string {
 		return "OpenRouter"
 	case "openai":
 		return "OpenAI"
+	case "gemini":
+		return "Google Gemini"
 	case "ollama":
 		return "Ollama"
 	case "llamacpp":

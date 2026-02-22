@@ -31,9 +31,10 @@ func (a *BaseAgent) Chat(systemPrompt string, tools []common.Tool, inputMessages
 
 		for _, fc := range msg.FunctionCalls {
 			commonMsg.FunctionCalls = append(commonMsg.FunctionCalls, common.FunctionCall{
-				ID:        fc.ID,
-				Name:      fc.Name,
-				Arguments: fc.Arguments,
+				ID:               fc.ID,
+				Name:             fc.Name,
+				Arguments:        fc.Arguments,
+				ThoughtSignature: fc.ThoughtSignature,
 			})
 		}
 
@@ -56,9 +57,10 @@ func (a *BaseAgent) Chat(systemPrompt string, tools []common.Tool, inputMessages
 	var toolCalls []ToolCall
 	for _, fc := range response.FunctionCalls {
 		toolCalls = append(toolCalls, ToolCall{
-			ID:        fc.ID,
-			Name:      fc.Name,
-			Arguments: fc.Arguments,
+			ID:               fc.ID,
+			Name:             fc.Name,
+			Arguments:        fc.Arguments,
+			ThoughtSignature: fc.ThoughtSignature,
 		})
 	}
 
@@ -94,9 +96,10 @@ func (a *BaseAgent) ChatStream(systemPrompt string, tools []common.Tool, inputMe
 
 		for _, fc := range msg.FunctionCalls {
 			commonMsg.FunctionCalls = append(commonMsg.FunctionCalls, common.FunctionCall{
-				ID:        fc.ID,
-				Name:      fc.Name,
-				Arguments: fc.Arguments,
+				ID:               fc.ID,
+				Name:             fc.Name,
+				Arguments:        fc.Arguments,
+				ThoughtSignature: fc.ThoughtSignature,
 			})
 		}
 
@@ -124,9 +127,10 @@ func (a *BaseAgent) ChatStream(systemPrompt string, tools []common.Tool, inputMe
 	var toolCalls []ToolCall
 	for _, fc := range response.FunctionCalls {
 		toolCalls = append(toolCalls, ToolCall{
-			ID:        fc.ID,
-			Name:      fc.Name,
-			Arguments: fc.Arguments,
+			ID:               fc.ID,
+			Name:             fc.Name,
+			Arguments:        fc.Arguments,
+			ThoughtSignature: fc.ThoughtSignature,
 		})
 	}
 

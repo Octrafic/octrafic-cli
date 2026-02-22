@@ -146,6 +146,11 @@ func FetchModelsForProvider(cfg *config.Config) tea.Cmd {
 				return ModelsFetchedMsg{Error: "No base URL configured for custom provider", Provider: cfg.Provider}
 			}
 			models, err = fetchCustomModelsList(cfg.BaseURL, cfg.APIKey)
+		case "gemini":
+			if cfg.APIKey == "" {
+				return ModelsFetchedMsg{Error: "No API key configured for Gemini", Provider: cfg.Provider}
+			}
+			models, err = fetchGeminiModelsList(cfg.APIKey)
 		default:
 			return ModelsFetchedMsg{Error: "Unknown provider: " + cfg.Provider, Provider: cfg.Provider}
 		}
@@ -394,6 +399,49 @@ func fetchLocalModelsList(serverURL string) ([]string, error) {
 
 	if len(modelIDs) == 0 {
 		return nil, fmt.Errorf("no models found on server")
+	}
+
+	return modelIDs, nil
+}
+
+func fetchGeminiModelsList(apiKey string) ([]string, error) {
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models?key=%s", apiKey)
+	client := &http.Client{Timeout: 15 * time.Second}
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch Gemini models: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("gemini API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var response struct {
+		Models []struct {
+			Name string `json:"name"`
+		} `json:"models"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return nil, fmt.Errorf("failed to parse Gemini models response: %w", err)
+	}
+
+	var modelIDs []string
+	for _, model := range response.Models {
+		name := model.Name
+		// Strip "models/" prefix if present
+		name = strings.TrimPrefix(name, "models/")
+		// Only include generative models (gemini-*)
+		if strings.HasPrefix(name, "gemini-") {
+			modelIDs = append(modelIDs, name)
+		}
+	}
+
+	if len(modelIDs) == 0 {
+		return nil, fmt.Errorf("no Gemini models found")
 	}
 
 	return modelIDs, nil
