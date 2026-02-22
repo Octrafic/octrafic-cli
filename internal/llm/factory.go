@@ -6,6 +6,7 @@ import (
 
 	"github.com/Octrafic/octrafic-cli/internal/llm/claude"
 	"github.com/Octrafic/octrafic-cli/internal/llm/common"
+	"github.com/Octrafic/octrafic-cli/internal/llm/gemini"
 	"github.com/Octrafic/octrafic-cli/internal/llm/openai"
 )
 
@@ -33,8 +34,10 @@ func CreateProvider(config common.ProviderConfig) (common.Provider, error) {
 	case "custom":
 		config.BaseURL = ensureV1Suffix(config.BaseURL)
 		return openai.NewOpenAIProvider(config)
+	case "gemini", "google":
+		return gemini.NewGeminiProvider(config)
 	default:
-		return nil, fmt.Errorf("unsupported provider: %s (supported: claude, anthropic, openai, openrouter, ollama, llamacpp, custom)", config.Provider)
+		return nil, fmt.Errorf("unsupported provider: %s (supported: claude, anthropic, openai, openrouter, ollama, llamacpp, gemini, custom)", config.Provider)
 	}
 }
 

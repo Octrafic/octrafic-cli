@@ -13,9 +13,10 @@ type Message struct {
 
 // FunctionCall represents a tool/function call
 type FunctionCall struct {
-	ID        string                 `json:"id,omitempty"`
-	Name      string                 `json:"name"`
-	Arguments map[string]interface{} `json:"arguments"`
+	ID               string                 `json:"id,omitempty"`
+	Name             string                 `json:"name"`
+	Arguments        map[string]interface{} `json:"arguments"`
+	ThoughtSignature string                 `json:"thought_signature,omitempty"`
 }
 
 // FunctionResponseData represents the response to a function call
