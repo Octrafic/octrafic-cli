@@ -1,15 +1,4 @@
 #!/usr/bin/env python3
-"""
-Generate release notes for Octrafic CLI releases using OpenRouter + Mistral.
-
-Usage:
-  python scripts/generate_release_notes.py v0.4.2
-
-Requires:
-  - OPENROUTER_API_KEY env var
-  - gh CLI authenticated
-"""
-
 import json
 import os
 import subprocess
@@ -84,7 +73,7 @@ def generate_notes(commits: list[dict]) -> str:
     for c in commits:
         author = c.get("author") or "unknown"
         label = f"[external: @{author}]" if author != OWNER else "[owner]"
-        msg = c.get("message", "").splitlines()[0]  # first line only
+        msg = c.get("message", "").splitlines()[0]
         commit_lines.append(f"- {msg} {label}")
 
     payload = json.dumps({
