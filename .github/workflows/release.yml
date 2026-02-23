@@ -44,6 +44,7 @@ jobs:
           python-version: '3.12'
 
       - name: Generate release notes
+        continue-on-error: true
         run: python scripts/generate_release_notes.py ${{ github.ref_name }}
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
