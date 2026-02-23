@@ -336,6 +336,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 					"status_code":     result.StatusCode,
 					"expected_status": expectedStatus,
 					"response_body":   result.ResponseBody,
+					"headers":         result.Headers,
 					"duration_ms":     result.Duration.Milliseconds(),
 					"passed":          passed,
 				},
@@ -420,6 +421,27 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 
 		if toolCall.Name == "ExportTests" {
 			return m.handleExportTests(toolCall)
+		}
+
+		if toolCall.Name == "wait" {
+			seconds := 5
+			if s, ok := toolCall.Arguments["seconds"].(float64); ok {
+				seconds = int(s)
+			} else if s, ok := toolCall.Arguments["seconds"].(int); ok {
+				seconds = s
+			}
+			if seconds < 1 {
+				seconds = 1
+			} else if seconds > 60 {
+				seconds = 60
+			}
+			time.Sleep(time.Duration(seconds) * time.Second)
+			return toolResultMsg{
+				toolID:   toolCall.ID,
+				toolName: toolCall.Name,
+				result:   map[string]any{"waited_seconds": seconds},
+				err:      nil,
+			}
 		}
 
 		return toolResultMsg{
@@ -729,6 +751,27 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 			return m.sendChatMessage("")
 		}
 		return nil // No tool_use, so don't send response back
+	}
+
+	if toolName == "wait" {
+		if toolID != "" {
+			var resultMap map[string]any
+			if r, ok := result.(map[string]any); ok {
+				resultMap = r
+			}
+			chatMsg := agent.ChatMessage{
+				Role: "user",
+				FunctionResponse: &agent.FunctionResponseData{
+					ID:       toolID,
+					Name:     "wait",
+					Response: resultMap,
+				},
+			}
+			m.conversationHistory = append(m.conversationHistory, chatMsg)
+			m.saveChatMessageToConversation(chatMsg)
+			return m.sendChatMessage("")
+		}
+		return nil
 	}
 
 	return nil

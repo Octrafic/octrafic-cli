@@ -184,6 +184,27 @@ func getMainAgentTools() []common.Tool {
 				"required": []string{"exports"},
 			},
 		},
+		{
+			Name:        "wait",
+			Description: "Wait for a specified number of seconds before proceeding. Use this when you receive a 429 rate limit response or a Retry-After header to pause before retrying.",
+			InputSchema: map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"properties": map[string]any{
+					"seconds": map[string]any{
+						"type":        "integer",
+						"description": "Number of seconds to wait (1-60)",
+						"minimum":     1,
+						"maximum":     60,
+					},
+					"reason": map[string]any{
+						"type":        "string",
+						"description": "Why you are waiting (e.g., 'Rate limit hit, Retry-After: 10')",
+					},
+				},
+				"required": []string{"seconds"},
+			},
+		},
 	}
 }
 
@@ -232,6 +253,13 @@ Parameters:
 
 ## ExecuteTestGroup
 Execute a group of tests against the API. Call AFTER GenerateTestPlan.
+Response includes: status_code, response_body, headers (check for Retry-After), duration_ms, passed.
+
+## wait
+Wait N seconds before proceeding. Use when:
+- You receive a 429 status code
+- Response headers contain Retry-After
+- You want to avoid hitting rate limits between test groups
 
 ## GenerateReport
 Generate PDF report from test results. Call AFTER tests are executed.
@@ -240,6 +268,7 @@ Generate PDF report from test results. Call AFTER tests are executed.
 - User mentions endpoint (e.g., "users", "auth") → fetch details, show info OR generate tests
 - User says "test X" → fetch details, generate & run tests
 - User says "list endpoints" → show list from available endpoints (no tool call)
+- After 429 response → call wait(seconds=N) where N comes from Retry-After header or default to 5
 - requires_auth=true → CLI adds auth header, requires_auth=false → no auth`, baseURL, endpointsInfo)
 }
 
