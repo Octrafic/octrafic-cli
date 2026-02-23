@@ -24,6 +24,7 @@ Rules:
 - Keep each item concise but descriptive enough to be useful
 - Use GitHub Markdown bullet lists under each section heading
 - If a commit was made by an external contributor (author field is not the owner), append their GitHub username at the end of the item like: (@username)
+- Output ONLY the Markdown — no preamble, no intro sentence, no explanation
 
 Example output:
 ## Features
