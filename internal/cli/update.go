@@ -1332,6 +1332,27 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 			m.animationFrame = 0
 			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
 			return m, tea.Batch(animationTick(), m.executeTool(toolCall))
+
+		case "wait":
+			m.currentTestToolID = toolCall.ID
+			m.currentTestToolName = "wait"
+
+			seconds := 5
+			if s, ok := toolCall.Arguments["seconds"].(float64); ok {
+				seconds = int(s)
+			} else if s, ok := toolCall.Arguments["seconds"].(int); ok {
+				seconds = s
+			}
+			label := fmt.Sprintf("%ds delay", seconds)
+			if reason, ok := toolCall.Arguments["reason"].(string); ok && reason != "" {
+				label = fmt.Sprintf("%ds delay — %s", seconds, reason)
+			}
+
+			showToolWidget(m, "Waiting", label)
+			m.agentState = StateUsingTool
+			m.animationFrame = 0
+			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Warning)
+			return m, tea.Batch(animationTick(), m.executeTool(toolCall))
 		}
 
 		return m, func() tea.Msg { return processToolCallsMsg{} }

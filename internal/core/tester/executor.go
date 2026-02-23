@@ -14,6 +14,7 @@ import (
 type TestResult struct {
 	StatusCode   int
 	ResponseBody string
+	Headers      map[string]string
 	Duration     time.Duration
 	Error        error
 }
@@ -99,9 +100,15 @@ func (e *Executor) ExecuteTest(method, endpoint string, headers map[string]strin
 		}, err
 	}
 
+	responseHeaders := make(map[string]string)
+	for key := range resp.Header {
+		responseHeaders[key] = resp.Header.Get(key)
+	}
+
 	return &TestResult{
 		StatusCode:   resp.StatusCode,
 		ResponseBody: string(respBody),
+		Headers:      responseHeaders,
 		Duration:     duration,
 		Error:        nil,
 	}, nil
