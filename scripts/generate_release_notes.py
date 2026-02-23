@@ -3,8 +3,7 @@
 Generate release notes for Octrafic CLI releases using OpenRouter + Mistral.
 
 Usage:
-  python scripts/generate_release_notes.py              # update all releases
-  python scripts/generate_release_notes.py v0.4.2       # update single release
+  python scripts/generate_release_notes.py v0.4.2
 
 Requires:
   - OPENROUTER_API_KEY env var
@@ -126,24 +125,24 @@ def process_release(tag: str, prev_tag: str | None) -> None:
 
 
 def main() -> None:
-    target = sys.argv[1] if len(sys.argv) > 1 else None
+    if len(sys.argv) < 2:
+        print("Usage: python scripts/generate_release_notes.py <version>", file=sys.stderr)
+        print("Example: python scripts/generate_release_notes.py v0.4.2", file=sys.stderr)
+        sys.exit(1)
+
+    target = sys.argv[1]
 
     releases = get_all_releases()
-    # sorted oldest → newest
     releases_sorted = sorted(releases, key=lambda r: r["createdAt"])
     tags = [r["tagName"] for r in releases_sorted]
 
-    if target:
-        if target not in tags:
-            print(f"Release {target} not found.", file=sys.stderr)
-            sys.exit(1)
-        idx = tags.index(target)
-        prev_tag = tags[idx - 1] if idx > 0 else None
-        process_release(target, prev_tag)
-    else:
-        for idx, tag in enumerate(tags):
-            prev_tag = tags[idx - 1] if idx > 0 else None
-            process_release(tag, prev_tag)
+    if target not in tags:
+        print(f"Release {target} not found.", file=sys.stderr)
+        sys.exit(1)
+
+    idx = tags.index(target)
+    prev_tag = tags[idx - 1] if idx > 0 else None
+    process_release(target, prev_tag)
 
 
 if __name__ == "__main__":
