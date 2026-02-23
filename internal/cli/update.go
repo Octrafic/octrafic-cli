@@ -1414,7 +1414,15 @@ func handleShowTestSelection(m *TestUIModel, msg showTestSelectionMsg) (tea.Mode
 
 	m.pendingTestGroupToolCall = &msg.toolCall
 
-	if m.executionMode == ModeAutoExecute || m.isHeadless {
+	allGETs := len(m.tests) > 0
+	for _, test := range m.tests {
+		if test.Method != "GET" {
+			allGETs = false
+			break
+		}
+	}
+
+	if m.executionMode == ModeAutoExecute || m.isHeadless || allGETs {
 		m.addMessage("")
 
 		tests := make([]map[string]any, 0)
