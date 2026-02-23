@@ -20,7 +20,8 @@ Given a list of commits (each with a message and author), write release notes gr
 Rules:
 - Only include sections that have content
 - Each item is a short, clear sentence a user can understand — no technical jargon, no commit prefixes like feat:/fix:/chore:
-- Skip purely internal changes: docs, CI, linting, refactoring, dependency bumps
+- Skip purely internal changes: docs, CI, linting, dependency bumps, and code refactors with no visible effect on the user
+- Include refactors that change user-facing behavior (e.g. how auth works, new config options, changed CLI flags)
 - Keep each item concise but descriptive enough to be useful
 - Use GitHub Markdown bullet lists under each section heading
 - If a commit was made by an external contributor (author field is not the owner), append their GitHub username at the end of the item like: (@username)
