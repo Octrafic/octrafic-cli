@@ -1016,6 +1016,9 @@ func handleTestPlanState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.selectedTestIndex++
 		}
 		return m, nil
+	case tea.KeySpace:
+		m.tests[m.selectedTestIndex].Selected = !m.tests[m.selectedTestIndex].Selected
+		return m, nil
 	case tea.KeyRunes:
 		if string(msg.Runes) == " " {
 			m.tests[m.selectedTestIndex].Selected = !m.tests[m.selectedTestIndex].Selected
