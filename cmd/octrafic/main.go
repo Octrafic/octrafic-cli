@@ -754,10 +754,21 @@ func loadAndStartConversation(project *storage.Project, conversation *storage.Co
 
 func main() {
 	_ = godotenv.Load()
-	if isFirstLaunch, err := internalConfig.IsFirstLaunch(); err == nil && isFirstLaunch {
-		completed := runOnboarding()
-		if !completed {
-			os.Exit(0)
+
+	skipOnboarding := false
+	if len(os.Args) > 1 {
+		cmd := os.Args[1]
+		if cmd == "test" || cmd == "scan" || cmd == "help" || cmd == "version" || cmd == "update" {
+			skipOnboarding = true
+		}
+	}
+
+	if !skipOnboarding {
+		if isFirstLaunch, err := internalConfig.IsFirstLaunch(); err == nil && isFirstLaunch {
+			completed := runOnboarding()
+			if !completed {
+				os.Exit(0)
+			}
 		}
 	}
 

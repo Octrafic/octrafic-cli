@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Octrafic/octrafic-cli/internal/cli"
+	internalConfig "github.com/Octrafic/octrafic-cli/internal/config"
 	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
 	"github.com/Octrafic/octrafic-cli/internal/core/parser"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
@@ -26,6 +27,14 @@ var testCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if testPath == "" && testPrompt == "" {
 			fmt.Println("Error: You must provide a file path (--path) or a prompt (--prompt)")
+			os.Exit(1)
+		}
+
+		cfg, err := internalConfig.Load()
+		if err != nil || (!cfg.Onboarded && (internalConfig.GetEnv("API_KEY") == "" && !internalConfig.IsLocalProvider(internalConfig.GetEnv("PROVIDER"))) || internalConfig.GetEnv("MODEL") == "") {
+			fmt.Fprintln(os.Stderr, "Error: missing LLM configuration.")
+			fmt.Fprintln(os.Stderr, "Please run 'octrafic' to complete interactive onboarding, or configure via environment variables (e.g., OCTRAFIC_PROVIDER, OCTRAFIC_API_KEY, OCTRAFIC_MODEL).")
+			fmt.Fprintln(os.Stderr, "Read more: https://docs.octrafic.com/guides/headless.html")
 			os.Exit(1)
 		}
 
