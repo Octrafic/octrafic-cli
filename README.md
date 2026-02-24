@@ -10,6 +10,7 @@ Open source CLI tool for automated API testing and reporting. Test your APIs by 
 ## Features
 
 - **Natural language testing** - describe what you want to test in plain English; the agent generates and executes the test plan
+- **OOPS Auto-Scanner** - scan your application source code to automatically generate OpenAPI 3.1 specifications
 - **Broad spec support** - OpenAPI 3.x, Swagger 2.0, Postman Collections, GraphQL, and Markdown docs
 - **Multiple auth methods** - Bearer token, API Key, Basic Auth, or none
 - **Export tests** - generate Postman collections, Python pytest files, or Bash curl scripts from any test session
@@ -48,6 +49,7 @@ octrafic
 
 **Guides**
 - [Chat Features](https://docs.octrafic.com/guides/chat-features)
+- [OpenAPI Scanner](https://docs.octrafic.com/guides/scanner)
 - [Project Management](https://docs.octrafic.com/guides/project-management)
 - [Providers](https://docs.octrafic.com/guides/providers)
 - [Authentication](https://docs.octrafic.com/guides/authentication)
