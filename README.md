@@ -1,9 +1,21 @@
-![Screenshot](./assets/screenshot.png)
+# Octrafic
 
 [![Go Version](https://img.shields.io/github/go-mod/go-version/Octrafic/octrafic-cli)](https://golang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Open source CLI tool for automated API testing and reporting. Test your APIs by describing what you want in natural language.
+
+![Demo](./assets/demo.gif)
+
+## Features
+
+- **Natural language testing** - describe what you want to test in plain English; the agent generates and executes the test plan
+- **Broad spec support** - OpenAPI 3.x, Swagger 2.0, Postman Collections, GraphQL, and Markdown docs
+- **Multiple auth methods** - Bearer token, API Key, Basic Auth, or none
+- **Export tests** - generate Postman collections, Python pytest files, or Bash curl scripts from any test session
+- **PDF reports** - produce professional test reports with a single command (requires `weasyprint`)
+- **Multiple LLM providers** - Anthropic Claude, OpenAI, Google Gemini, OpenRouter, Ollama, llama.cpp, or any OpenAI-compatible endpoint
+- **Headless / CI mode** - run non-interactively with `octrafic test` for pipeline integration
 
 ## Install
 
