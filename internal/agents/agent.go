@@ -7,7 +7,6 @@ import (
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/llm"
 	"github.com/Octrafic/octrafic-cli/internal/llm/common"
-	"os"
 	"strings"
 )
 
@@ -60,53 +59,21 @@ func extractJSONFromMarkdown(response string) string {
 }
 
 func NewAgent(baseURL string) (*Agent, error) {
-	// Try loading config from file first (onboarding users)
-	cfg, err := config.Load()
-	if err == nil && cfg.Onboarded && (cfg.APIKey != "" || config.IsLocalProvider(cfg.Provider)) {
-		// Use config from file
-		logger.Info("Using LLM config from onboarding",
-			logger.String("provider", cfg.Provider),
-			logger.String("model", cfg.Model))
-
-		providerConfig := common.ProviderConfig{
-			Provider: cfg.Provider,
-			APIKey:   cfg.APIKey,
-			BaseURL:  cfg.BaseURL,
-			Model:    cfg.Model,
-		}
-
-		llmProvider, err := llm.CreateProvider(providerConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create provider: %w", err)
-		}
-
-		return &Agent{
-			baseAgent: NewBaseAgent(llmProvider),
-			baseURL:   baseURL,
-		}, nil
+	if !config.HasValidLLMConfig() {
+		return nil, fmt.Errorf("missing LLM configuration")
 	}
 
-	// Fallback to environment variables with OCTRAFIC_ prefix
-	provider := config.GetEnv("PROVIDER")
-	if provider == "" {
-		provider = "claude" // Default to Claude
-	}
+	provider, apiKey, configBaseURL, modelName := config.GetActiveLLMConfig()
 
-	apiKey := config.GetEnv("API_KEY")
-	if apiKey == "" {
-		// Legacy fallback for backwards compatibility
-		if provider == "openai" || provider == "openrouter" {
-			apiKey = os.Getenv("OPENAI_API_KEY")
-		} else {
-			apiKey = os.Getenv("ANTHROPIC_API_KEY")
-		}
-	}
+	logger.Info("Using LLM provider",
+		logger.String("provider", provider),
+		logger.String("model", modelName))
 
 	providerConfig := common.ProviderConfig{
 		Provider: provider,
 		APIKey:   apiKey,
-		BaseURL:  config.GetEnv("BASE_URL"),
-		Model:    config.GetEnv("MODEL"),
+		BaseURL:  configBaseURL,
+		Model:    modelName,
 	}
 
 	// Create provider
@@ -115,7 +82,6 @@ func NewAgent(baseURL string) (*Agent, error) {
 		return nil, fmt.Errorf("failed to create provider: %w", err)
 	}
 
-	logger.Info("Using LLM provider", logger.String("provider", provider))
 	return &Agent{
 		baseAgent: NewBaseAgent(llmProvider),
 		baseURL:   baseURL,

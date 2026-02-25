@@ -21,46 +21,14 @@ var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan project directory and automatically generate OpenAPI spec.",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := internalConfig.Load()
-
-		provider := internalConfig.GetEnv("PROVIDER")
-		apiKey := internalConfig.GetEnv("API_KEY")
-		baseURL := internalConfig.GetEnv("BASE_URL")
-		modelName := internalConfig.GetEnv("MODEL")
-
-		if err == nil && cfg.Onboarded && (cfg.APIKey != "" || internalConfig.IsLocalProvider(cfg.Provider)) {
-			// Use config from file if available and no override
-			if provider == "" {
-				provider = cfg.Provider
-			}
-			if apiKey == "" {
-				apiKey = cfg.APIKey
-			}
-			if baseURL == "" {
-				baseURL = cfg.BaseURL
-			}
-			if modelName == "" {
-				modelName = cfg.Model
-			}
-		}
-
-		if provider == "" {
-			provider = "claude"
-		}
-		if apiKey == "" {
-			if provider == "openai" || provider == "openrouter" {
-				apiKey = os.Getenv("OPENAI_API_KEY")
-			} else {
-				apiKey = os.Getenv("ANTHROPIC_API_KEY")
-			}
-		}
-
-		if (apiKey == "" && !internalConfig.IsLocalProvider(provider)) || modelName == "" {
+		if !internalConfig.HasValidLLMConfig() {
 			fmt.Fprintln(os.Stderr, "Error: missing LLM configuration.")
 			fmt.Fprintln(os.Stderr, "Please run 'octrafic' to complete interactive onboarding, or configure via environment variables (e.g., OCTRAFIC_PROVIDER, OCTRAFIC_API_KEY, OCTRAFIC_MODEL).")
 			fmt.Fprintln(os.Stderr, "Read more: https://docs.octrafic.com/guides/scanner.html")
 			os.Exit(1)
 		}
+
+		provider, apiKey, baseURL, modelName := internalConfig.GetActiveLLMConfig()
 
 		providerConfig := common.ProviderConfig{
 			Provider: provider,
