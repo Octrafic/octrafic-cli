@@ -109,3 +109,47 @@ func GetEnvVarName(key string) string {
 func GetEnv(key string) string {
 	return os.Getenv(GetEnvVarName(key))
 }
+
+// GetActiveLLMConfig resolves the effective LLM configuration by merging environment variables and saved config.
+func GetActiveLLMConfig() (provider, apiKey, baseURL, modelName string) {
+	cfg, err := Load()
+
+	provider = GetEnv("PROVIDER")
+	apiKey = GetEnv("API_KEY")
+	baseURL = GetEnv("BASE_URL")
+	modelName = GetEnv("MODEL")
+
+	if err == nil && cfg != nil && cfg.Onboarded && (cfg.APIKey != "" || IsLocalProvider(cfg.Provider)) {
+		if provider == "" {
+			provider = cfg.Provider
+		}
+		if apiKey == "" {
+			apiKey = cfg.APIKey
+		}
+		if baseURL == "" {
+			baseURL = cfg.BaseURL
+		}
+		if modelName == "" {
+			modelName = cfg.Model
+		}
+	}
+
+	if provider == "" {
+		provider = "claude"
+	}
+	if apiKey == "" {
+		if provider == "openai" || provider == "openrouter" {
+			apiKey = os.Getenv("OPENAI_API_KEY")
+		} else {
+			apiKey = os.Getenv("ANTHROPIC_API_KEY")
+		}
+	}
+
+	return provider, apiKey, baseURL, modelName
+}
+
+// HasValidLLMConfig checks whether there is a valid LLM configuration either in the environment or saved config.
+func HasValidLLMConfig() bool {
+	provider, apiKey, _, modelName := GetActiveLLMConfig()
+	return (apiKey != "" || IsLocalProvider(provider)) && modelName != ""
+}

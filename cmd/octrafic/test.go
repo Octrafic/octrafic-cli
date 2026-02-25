@@ -30,8 +30,7 @@ var testCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		cfg, err := internalConfig.Load()
-		if err != nil || (!cfg.Onboarded && (internalConfig.GetEnv("API_KEY") == "" && !internalConfig.IsLocalProvider(internalConfig.GetEnv("PROVIDER"))) || internalConfig.GetEnv("MODEL") == "") {
+		if !internalConfig.HasValidLLMConfig() {
 			fmt.Fprintln(os.Stderr, "Error: missing LLM configuration.")
 			fmt.Fprintln(os.Stderr, "Please run 'octrafic' to complete interactive onboarding, or configure via environment variables (e.g., OCTRAFIC_PROVIDER, OCTRAFIC_API_KEY, OCTRAFIC_MODEL).")
 			fmt.Fprintln(os.Stderr, "Read more: https://docs.octrafic.com/guides/headless.html")
