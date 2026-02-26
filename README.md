@@ -9,7 +9,7 @@ Open source CLI tool for automated API testing and reporting. Test your APIs by 
 
 ![Demo](./assets/demo.gif)
 
-> If Octrafic saves you time, please ⭐ **[star the repo](https://github.com/Octrafic/octrafic-cli)** — it helps a lot!
+> If you find Octrafic useful, please ⭐ **[star the repo](https://github.com/Octrafic/octrafic-cli)** - it helps a lot!
 
 ## Features
 
