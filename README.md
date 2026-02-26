@@ -2,10 +2,14 @@
 
 [![Go Version](https://img.shields.io/github/go-mod/go-version/Octrafic/octrafic-cli)](https://golang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Stars](https://img.shields.io/github/stars/Octrafic/octrafic-cli?style=social)](...)
+[![Release](https://img.shields.io/github/v/release/Octrafic/octrafic-cli)](...)
 
 Open source CLI tool for automated API testing and reporting. Test your APIs by describing what you want in natural language.
 
 ![Demo](./assets/demo.gif)
+
+> If Octrafic saves you time, please ⭐ **[star the repo](https://github.com/Octrafic/octrafic-cli)** — it helps a lot!
 
 ## Features
 
