@@ -44,18 +44,18 @@ octrafic
 ## Documentation
 
 **Getting Started**
-- [Introduction](https://docs.octrafic.com/getting-started/introduction)
-- [Quick Start](https://docs.octrafic.com/getting-started/quick-start)
+- [Introduction](https://docs.octrafic.com/getting-started/introduction.html)
+- [Quick Start](https://docs.octrafic.com/getting-started/quick-start.html)
 
 **Guides**
-- [Chat Features](https://docs.octrafic.com/guides/chat-features)
-- [OpenAPI Scanner](https://docs.octrafic.com/guides/scanner)
-- [Project Management](https://docs.octrafic.com/guides/project-management)
-- [Providers](https://docs.octrafic.com/guides/providers)
-- [Authentication](https://docs.octrafic.com/guides/authentication)
-- [PDF Reports](https://docs.octrafic.com/guides/reports)
-- [Exporting Tests](https://docs.octrafic.com/guides/exports)
-- [Headless Mode](https://docs.octrafic.com/guides/headless)
+- [Chat Features](https://docs.octrafic.com/guides/chat-features.html)
+- [OpenAPI Scanner](https://docs.octrafic.com/guides/scanner.html)
+- [Project Management](https://docs.octrafic.com/guides/project-management.html)
+- [Providers](https://docs.octrafic.com/guides/providers.html)
+- [Authentication](https://docs.octrafic.com/guides/authentication.html)
+- [PDF Reports](https://docs.octrafic.com/guides/reports.html)
+- [Exporting Tests](https://docs.octrafic.com/guides/exports.html)
+- [Headless Mode](https://docs.octrafic.com/guides/headless.html)
 
 ## Contributing
 
