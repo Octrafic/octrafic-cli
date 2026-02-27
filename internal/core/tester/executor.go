@@ -40,6 +40,11 @@ func (e *Executor) UpdateAuthProvider(authProvider auth.AuthProvider) {
 	e.authProvider = authProvider
 }
 
+// UpdateBaseURL updates the base URL for the executor
+func (e *Executor) UpdateBaseURL(baseURL string) {
+	e.baseURL = baseURL
+}
+
 func (e *Executor) ExecuteTest(method, endpoint string, headers map[string]string, body any, requiresAuth bool) (*TestResult, error) {
 	startTime := time.Now()
 
