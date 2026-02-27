@@ -1,0 +1,164 @@
+name: 'Octrafic API Test'
+description: 'Run AI-powered API tests with Octrafic in your CI/CD pipeline'
+author: 'Octrafic'
+branding:
+  icon: 'zap'
+  color: 'blue'
+
+inputs:
+  url:
+    description: 'Base URL of the API to test (e.g. https://api.example.com)'
+    required: true
+
+  spec:
+    description: 'Path to OpenAPI/Swagger spec file. Required when using prompt.'
+    required: false
+
+  path:
+    description: 'Path to test file: Postman collection (.json), shell script (.sh), or pytest (.py)'
+    required: false
+
+  prompt:
+    description: 'Natural language instruction for AI-generated tests. Requires spec and api-key.'
+    required: false
+
+  provider:
+    description: 'LLM provider: claude, openai, gemini, openrouter, ollama, custom'
+    required: false
+    default: 'claude'
+
+  api-key:
+    description: 'LLM provider API key. Required when using prompt.'
+    required: false
+
+  model:
+    description: 'LLM model name (e.g. claude-haiku-4-5, gpt-4o-mini)'
+    required: false
+
+  base-url:
+    description: 'Base URL for custom or local LLM provider (e.g. http://localhost:11434)'
+    required: false
+
+  auth:
+    description: 'API authentication type: bearer, apikey, basic, none'
+    required: false
+    default: 'none'
+
+  token:
+    description: 'Bearer token for API authentication'
+    required: false
+
+  key:
+    description: 'API key header name (e.g. X-API-Key)'
+    required: false
+
+  value:
+    description: 'API key value'
+    required: false
+
+  username:
+    description: 'Username for basic authentication'
+    required: false
+
+  password:
+    description: 'Password for basic authentication'
+    required: false
+
+  version:
+    description: 'Octrafic CLI version to install (e.g. v0.4.2). Defaults to latest release.'
+    required: false
+    default: 'latest'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Octrafic CLI
+      shell: bash
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+      run: |
+        set -e
+
+        ARCH=$(uname -m)
+        case "$ARCH" in
+          x86_64)          ARCH_NAME="x86_64" ;;
+          aarch64 | arm64) ARCH_NAME="arm64"  ;;
+          armv7l)          ARCH_NAME="armv7"  ;;
+          *)
+            echo "::error::Unsupported architecture: $ARCH"
+            exit 1
+            ;;
+        esac
+
+        VERSION="$INPUT_VERSION"
+        if [ "$VERSION" = "latest" ]; then
+          VERSION=$(curl -fsSL "https://api.github.com/repos/Octrafic/octrafic-cli/releases/latest" \
+            | grep '"tag_name"' \
+            | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
+        fi
+        echo "Installing Octrafic ${VERSION} (${RUNNER_OS}/${ARCH_NAME})"
+
+        EXTRACT_DIR="$RUNNER_TEMP/octrafic-extract"
+        BIN_DIR="$RUNNER_TEMP/octrafic-bin"
+        mkdir -p "$EXTRACT_DIR" "$BIN_DIR"
+
+        case "$RUNNER_OS" in
+          Linux)
+            ARCHIVE="octrafic_Linux_${ARCH_NAME}.tar.gz"
+            URL="https://github.com/Octrafic/octrafic-cli/releases/download/${VERSION}/${ARCHIVE}"
+            curl -fsSL "$URL" -o "$RUNNER_TEMP/octrafic.tar.gz"
+            tar -xzf "$RUNNER_TEMP/octrafic.tar.gz" -C "$EXTRACT_DIR" --strip-components=1
+            cp "$EXTRACT_DIR/octrafic" "$BIN_DIR/octrafic"
+            ;;
+          macOS)
+            ARCHIVE="octrafic_Darwin_${ARCH_NAME}.tar.gz"
+            URL="https://github.com/Octrafic/octrafic-cli/releases/download/${VERSION}/${ARCHIVE}"
+            curl -fsSL "$URL" -o "$RUNNER_TEMP/octrafic.tar.gz"
+            tar -xzf "$RUNNER_TEMP/octrafic.tar.gz" -C "$EXTRACT_DIR" --strip-components=1
+            cp "$EXTRACT_DIR/octrafic" "$BIN_DIR/octrafic"
+            ;;
+          Windows)
+            ARCHIVE="octrafic_Windows_${ARCH_NAME}.zip"
+            URL="https://github.com/Octrafic/octrafic-cli/releases/download/${VERSION}/${ARCHIVE}"
+            curl -fsSL "$URL" -o "$RUNNER_TEMP/octrafic.zip"
+            unzip -q "$RUNNER_TEMP/octrafic.zip" -d "$EXTRACT_DIR"
+            BINARY=$(find "$EXTRACT_DIR" -name "octrafic.exe" | head -1)
+            cp "$BINARY" "$BIN_DIR/octrafic.exe"
+            ;;
+          *)
+            echo "::error::Unsupported OS: $RUNNER_OS"
+            exit 1
+            ;;
+        esac
+
+        chmod +x "$BIN_DIR/octrafic" 2>/dev/null || true
+        echo "$BIN_DIR" >> "$GITHUB_PATH"
+        echo "Octrafic ${VERSION} installed successfully"
+
+    - name: Run API Tests
+      shell: bash
+      env:
+        OCTRAFIC_PROVIDER: ${{ inputs.provider }}
+        OCTRAFIC_API_KEY: ${{ inputs.api-key }}
+        OCTRAFIC_MODEL: ${{ inputs.model }}
+        OCTRAFIC_BASE_URL: ${{ inputs.base-url }}
+        OCTRAFIC_AUTH_TYPE: ${{ inputs.auth }}
+        OCTRAFIC_AUTH_TOKEN: ${{ inputs.token }}
+        OCTRAFIC_AUTH_KEY: ${{ inputs.key }}
+        OCTRAFIC_AUTH_VALUE: ${{ inputs.value }}
+        OCTRAFIC_AUTH_USER: ${{ inputs.username }}
+        OCTRAFIC_AUTH_PASS: ${{ inputs.password }}
+        INPUT_URL: ${{ inputs.url }}
+        INPUT_SPEC: ${{ inputs.spec }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_PROMPT: ${{ inputs.prompt }}
+      run: |
+        set -e
+
+        ARGS=(test --url "$INPUT_URL")
+
+        [ -n "$INPUT_SPEC" ]   && ARGS+=(--spec   "$INPUT_SPEC")
+        [ -n "$INPUT_PATH" ]   && ARGS+=(--path   "$INPUT_PATH")
+        [ -n "$INPUT_PROMPT" ] && ARGS+=(--prompt "$INPUT_PROMPT")
+
+        octrafic "${ARGS[@]}"
