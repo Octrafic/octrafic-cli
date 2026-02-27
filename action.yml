@@ -1,4 +1,4 @@
-name: 'Octrafic API Test'
+name: 'Octrafic'
 description: 'Run AI-powered API tests with Octrafic in your CI/CD pipeline'
 author: 'Octrafic'
 branding:
