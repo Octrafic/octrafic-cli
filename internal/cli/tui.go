@@ -57,6 +57,9 @@ var availableCommands = []Command{
 	{Name: "/save", Description: "Save temp project with a name"},
 	{Name: "/release-notes", Description: "Show latest release notes"},
 	{Name: "/auto", Description: "Toggle Auto-execute mode"},
+	{Name: "/url", Description: "Change the API base URL (usage: /url <new-url>)"},
+	{Name: "/spec", Description: "Change the API spec file (usage: /spec <path>)"},
+	{Name: "/name", Description: "Change the current project name (usage: /name <new-name>)"},
 }
 
 type Test struct {

@@ -252,3 +252,8 @@ Requirements:
 
 	return endpoints, nil
 }
+
+// SetBaseURL updates the base URL for the agent.
+func (a *Agent) SetBaseURL(baseURL string) {
+	a.baseURL = baseURL
+}

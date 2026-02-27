@@ -3,14 +3,18 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/Octrafic/octrafic-cli/internal/agents"
 	"github.com/Octrafic/octrafic-cli/internal/config"
+	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
 	"github.com/Octrafic/octrafic-cli/internal/core/auth"
+	"github.com/Octrafic/octrafic-cli/internal/core/parser"
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"github.com/Octrafic/octrafic-cli/internal/updater"
-	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -21,6 +25,13 @@ import (
 
 type releaseNotesMsg struct {
 	releases []updater.ReleaseEntry
+	err      error
+}
+
+type specParsedMsg struct {
+	specPath string
+	spec     *parser.Specification
+	analysis *analyzer.Analysis
 	err      error
 }
 
@@ -177,6 +188,37 @@ func (m *TestUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.lastMessageRole = "assistant"
 		m.updateViewport()
+		return m, nil
+
+	case specParsedMsg:
+		if msg.err != nil {
+			m.addMessage(m.errorStyle.Render(fmt.Sprintf("✗ %s", msg.err.Error())))
+			m.lastMessageRole = "assistant"
+			return m, nil
+		}
+
+		oldSpec := m.specPath
+		m.specPath = msg.specPath
+		m.analysis = msg.analysis
+
+		if m.currentProject != nil {
+			m.currentProject.SpecPath = msg.specPath
+			if err := storage.SaveProject(m.currentProject); err != nil {
+				logger.Error("Failed to save project spec", zap.Error(err))
+			}
+		}
+
+		if oldSpec != "" {
+			m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ Spec changed from %s to %s", oldSpec, msg.specPath)))
+		} else {
+			m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ Spec set to %s", msg.specPath)))
+		}
+		endpointCount := 0
+		if msg.analysis.Specification != nil {
+			endpointCount = len(msg.analysis.Specification.Endpoints)
+		}
+		m.addMessage(m.subtleStyle.Render(fmt.Sprintf("  Found %d endpoints", endpointCount)))
+		m.lastMessageRole = "assistant"
 		return m, nil
 
 	case ModelsFetchedMsg:
@@ -911,9 +953,178 @@ func handleSlashCommands(m *TestUIModel, userInput string) (*TestUIModel, tea.Cm
 		}
 		m.lastMessageRole = "assistant"
 		return m, nil, true
+
+	default:
+		if userInput == "/url" || strings.HasPrefix(userInput, "/url ") {
+			return handleURLCommand(m, userInput)
+		}
+		if userInput == "/spec" || strings.HasPrefix(userInput, "/spec ") {
+			return handleSpecCommand(m, userInput)
+		}
+		if userInput == "/name" || strings.HasPrefix(userInput, "/name ") {
+			return handleNameCommand(m, userInput)
+		}
 	}
 
 	return m, nil, false
+}
+
+// handleNameCommand processes the /name command to change the project name.
+func handleNameCommand(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd, bool) {
+	m.addMessage("")
+	m.addMessage(renderUserLabel() + " " + userInput)
+	m.addMessage("")
+	m.lastMessageRole = "user"
+
+	parts := strings.Fields(userInput)
+	if len(parts) < 2 {
+		m.addMessage(m.errorStyle.Render("Usage: /name <new-name>"))
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+	}
+
+	newName := strings.Join(parts[1:], " ")
+
+	if m.currentProject == nil {
+		m.addMessage(m.errorStyle.Render("✗ No active project to rename"))
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+	}
+
+	if m.currentProject.IsTemporary {
+		m.addMessage(m.errorStyle.Render("✗ Cannot rename a temporary project"))
+		m.addMessage(m.subtleStyle.Render("Use /save <name> instead to save and name it"))
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+	}
+
+	if conflict, err := storage.CheckNameConflict(newName, m.currentProject.ID); err != nil {
+		m.addMessage(m.errorStyle.Render("Failed to check name conflict: " + err.Error()))
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+	} else if conflict != nil {
+		m.addMessage(m.errorStyle.Render(fmt.Sprintf("✗ Project name \"%s\" already exists", newName)))
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+	}
+
+	oldName := m.currentProject.Name
+	m.currentProject.Name = newName
+
+	if err := storage.SaveProject(m.currentProject); err != nil {
+		logger.Error("Failed to save project name", zap.Error(err))
+		m.addMessage(m.errorStyle.Render("Failed to save project name: " + err.Error()))
+		m.currentProject.Name = oldName
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+	}
+
+	if m.conversationID != "" && m.conversationTitle == oldName {
+		m.conversationTitle = newName
+	}
+
+	m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ Project renamed from \"%s\" to \"%s\"", oldName, newName)))
+	m.lastMessageRole = "assistant"
+
+	return m, tea.SetWindowTitle(newName + " - Octrafic"), true
+}
+
+// handleURLCommand processes the /url command to change the API base URL.
+func handleURLCommand(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd, bool) {
+	m.addMessage("")
+	m.addMessage(renderUserLabel() + " " + userInput)
+	m.addMessage("")
+	m.lastMessageRole = "user"
+
+	parts := strings.Fields(userInput)
+	if len(parts) < 2 {
+		m.addMessage(m.errorStyle.Render("Usage: /url <new-url>"))
+		m.addMessage(m.subtleStyle.Render("Example: /url https://api.example.com"))
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+	}
+
+	newURL := parts[1]
+
+	if !strings.HasPrefix(newURL, "http://") && !strings.HasPrefix(newURL, "https://") {
+		m.addMessage(m.errorStyle.Render("Invalid URL: URL must start with http:// or https://"))
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+	}
+
+	oldURL := m.baseURL
+	m.baseURL = newURL
+
+	if m.currentProject != nil {
+		m.currentProject.BaseURL = newURL
+		if err := storage.SaveProject(m.currentProject); err != nil {
+			logger.Error("Failed to save project URL", zap.Error(err))
+		}
+	}
+
+	if m.localAgent != nil {
+		m.localAgent.SetBaseURL(newURL)
+	}
+
+	if m.testExecutor != nil {
+		m.testExecutor.UpdateBaseURL(newURL)
+	}
+
+	if oldURL != "" {
+		m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ URL changed from %s to %s", oldURL, newURL)))
+	} else {
+		m.addMessage(m.successStyle.Render(fmt.Sprintf("✓ URL set to %s", newURL)))
+	}
+	m.lastMessageRole = "assistant"
+	return m, nil, true
+}
+
+// handleSpecCommand processes the /spec command to change the API spec file.
+func handleSpecCommand(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd, bool) {
+	m.addMessage("")
+	m.addMessage(renderUserLabel() + " " + userInput)
+	m.addMessage("")
+	m.lastMessageRole = "user"
+
+	parts := strings.Fields(userInput)
+	if len(parts) < 2 {
+		m.addMessage(m.errorStyle.Render("Usage: /spec <path>"))
+		m.addMessage(m.subtleStyle.Render("Example: /spec ./openapi.json"))
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+	}
+
+	specPath := parts[1]
+
+	if _, err := os.Stat(specPath); os.IsNotExist(err) {
+		m.addMessage(m.errorStyle.Render(fmt.Sprintf("✗ Spec file not found: %s", specPath)))
+		m.lastMessageRole = "assistant"
+		return m, nil, true
+	}
+
+	m.addMessage(m.subtleStyle.Render(fmt.Sprintf("Loading specification from %s...", specPath)))
+	m.lastMessageRole = "assistant"
+
+	cmd := func() tea.Msg {
+		spec, err := parser.ParseSpecification(specPath)
+		if err != nil {
+			return specParsedMsg{err: fmt.Errorf("failed to parse spec file: %w", err), specPath: specPath}
+		}
+
+		analysis, err := analyzer.AnalyzeAPI(m.baseURL, spec)
+		if err != nil {
+			return specParsedMsg{err: fmt.Errorf("failed to analyze spec: %w", err), specPath: specPath}
+		}
+
+		return specParsedMsg{
+			specPath: specPath,
+			spec:     spec,
+			analysis: analysis,
+			err:      nil,
+		}
+	}
+
+	return m, cmd, true
 }
 
 // handleAuthCommand processes auth subcommands like "auth bearer", "auth apikey", etc.
