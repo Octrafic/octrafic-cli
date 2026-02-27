@@ -1047,9 +1047,7 @@ func handleURLCommand(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd, 
 	newURL := parts[1]
 
 	if !strings.HasPrefix(newURL, "http://") && !strings.HasPrefix(newURL, "https://") {
-		m.addMessage(m.errorStyle.Render("Invalid URL: URL must start with http:// or https://"))
-		m.lastMessageRole = "assistant"
-		return m, nil, true
+		newURL = "http://" + newURL
 	}
 
 	oldURL := m.baseURL
@@ -1094,7 +1092,7 @@ func handleSpecCommand(m *TestUIModel, userInput string) (*TestUIModel, tea.Cmd,
 		return m, nil, true
 	}
 
-	specPath := parts[1]
+	specPath := strings.Join(parts[1:], " ")
 
 	if _, err := os.Stat(specPath); os.IsNotExist(err) {
 		m.addMessage(m.errorStyle.Render(fmt.Sprintf("✗ Spec file not found: %s", specPath)))
