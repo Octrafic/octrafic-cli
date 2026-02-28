@@ -48,42 +48,43 @@ func (e *Executor) UpdateBaseURL(baseURL string) {
 func (e *Executor) ExecuteTest(method, endpoint string, headers map[string]string, body any, requiresAuth bool) (*TestResult, error) {
 	startTime := time.Now()
 
-	// Build full URL
 	fullURL := e.baseURL + endpoint
 	if !strings.HasPrefix(fullURL, "http://") && !strings.HasPrefix(fullURL, "https://") {
 		fullURL = "http://" + fullURL
 	}
 
-	// Prepare request body
 	var reqBody io.Reader
 	if body != nil {
-		jsonBody, err := json.Marshal(body)
-		if err != nil {
-			return &TestResult{Error: fmt.Errorf("failed to marshal body: %w", err)}, err
+		switch b := body.(type) {
+		case string:
+			if b != "" {
+				reqBody = strings.NewReader(b)
+			}
+		default:
+			jsonBody, err := json.Marshal(body)
+			if err != nil {
+				return &TestResult{Error: fmt.Errorf("failed to marshal body: %w", err)}, err
+			}
+			reqBody = bytes.NewBuffer(jsonBody)
 		}
-		reqBody = bytes.NewBuffer(jsonBody)
 	}
 
-	// Create request
 	req, err := http.NewRequest(method, fullURL, reqBody)
 	if err != nil {
 		return &TestResult{Error: fmt.Errorf("failed to create request: %w", err)}, err
 	}
 
-	// Add headers
 	req.Header.Set("Content-Type", "application/json")
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
 
-	// Apply authentication only when required
 	if requiresAuth && e.authProvider != nil {
 		if err := e.authProvider.Apply(req); err != nil {
 			return &TestResult{Error: fmt.Errorf("failed to apply auth: %w", err)}, err
 		}
 	}
 
-	// Execute request
 	resp, err := e.client.Do(req)
 	duration := time.Since(startTime)
 
@@ -95,7 +96,6 @@ func (e *Executor) ExecuteTest(method, endpoint string, headers map[string]strin
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	// Read response
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return &TestResult{
