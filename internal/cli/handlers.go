@@ -6,12 +6,14 @@ import (
 	"github.com/Octrafic/octrafic-cli/internal/agents"
 	"github.com/Octrafic/octrafic-cli/internal/core/parser"
 	"github.com/Octrafic/octrafic-cli/internal/core/reporter"
+	"github.com/Octrafic/octrafic-cli/internal/core/tester"
 	"github.com/Octrafic/octrafic-cli/internal/exporter"
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"maps"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -327,6 +329,8 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 
 			passed := result.StatusCode == expectedStatus
 
+			schemaErrors := m.validateResponseSchema(method, endpoint, result.StatusCode, result.ResponseBody)
+
 			return toolResultMsg{
 				toolID:   toolCall.ID,
 				toolName: toolCall.Name,
@@ -339,6 +343,8 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 					"headers":         result.Headers,
 					"duration_ms":     result.Duration.Milliseconds(),
 					"passed":          passed,
+					"schema_valid":    len(schemaErrors) == 0,
+					"schema_errors":   schemaErrors,
 				},
 				err: nil,
 			}
@@ -779,6 +785,46 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 
 func (m *TestUIModel) loadProjectEndpoints() ([]parser.Endpoint, error) {
 	return storage.LoadEndpoints(m.currentProject.ID, m.currentProject.IsTemporary)
+}
+
+// validateResponseSchema checks the response body against the OpenAPI schema for the given endpoint.
+// Returns a list of validation errors, or nil if no schema is available.
+func (m *TestUIModel) validateResponseSchema(method, path string, statusCode int, body string) []string {
+	if m.analysis == nil || m.analysis.Specification == nil {
+		return nil
+	}
+	statusKey := strconv.Itoa(statusCode)
+	for _, ep := range m.analysis.Specification.Endpoints {
+		if strings.EqualFold(ep.Method, method) && matchPath(ep.Path, path) {
+			if schema, ok := ep.ResponseSchemas[statusKey]; ok {
+				return tester.ValidateSchema(body, schema)
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
+// matchPath checks if a concrete path matches an OpenAPI path template.
+// Segments wrapped in {} are treated as wildcards.
+func matchPath(template, actual string) bool {
+	if template == actual {
+		return true
+	}
+	tParts := strings.Split(strings.Trim(template, "/"), "/")
+	aParts := strings.Split(strings.Trim(actual, "/"), "/")
+	if len(tParts) != len(aParts) {
+		return false
+	}
+	for i, tp := range tParts {
+		if strings.HasPrefix(tp, "{") && strings.HasSuffix(tp, "}") {
+			continue
+		}
+		if !strings.EqualFold(tp, aParts[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
