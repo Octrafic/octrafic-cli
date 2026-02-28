@@ -115,7 +115,7 @@ Use assertions to verify specific fields in the response body:
 Operators: eq, neq, exists, not_exists, contains, gt, gte, lt, lte
 
 ## ExportTests
-Export API tests to formats strictly when the user requests it (e.g. "zapisz do postmana", "eksportuj testy do pliku sh"). 
+Export API tests to formats strictly when the user requests it (e.g. "save to postman", "export tests to sh file"). 
 Can export combinations of "postman", "pytest" or "sh".
 
 ## wait
