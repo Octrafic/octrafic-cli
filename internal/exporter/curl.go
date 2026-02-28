@@ -17,7 +17,21 @@ func (e *CurlExporter) Export(req ExportRequest) error {
 
 	script.WriteString("#!/bin/bash\n\n")
 	fmt.Fprintf(&script, "# Generated curl commands for %s\n", req.BaseURL)
-	fmt.Fprintf(&script, "BASE_URL=\"%s\"\n\n", req.BaseURL)
+	fmt.Fprintf(&script, "BASE_URL=\"%s\"\n", req.BaseURL)
+
+	if req.AuthType != "" {
+		script.WriteString("\n# Set credentials via environment variables before running\n")
+		switch req.AuthType {
+		case "bearer":
+			script.WriteString("# export AUTH_TOKEN=your_token\n")
+		case "apikey":
+			script.WriteString("# export API_KEY_VALUE=your_key\n")
+		case "basic":
+			script.WriteString("# export AUTH_USER=your_username\n")
+			script.WriteString("# export AUTH_PASS=your_password\n")
+		}
+	}
+	script.WriteString("\n")
 
 	for i, test := range req.Tests {
 		if i > 0 {
@@ -42,30 +56,26 @@ func (e *CurlExporter) buildCurlCommand(test TestData, req ExportRequest) string
 	parts = append(parts, "curl")
 	parts = append(parts, fmt.Sprintf("-X %s", test.Method))
 
-	parts = append(parts, "-H 'Content-Type: application/json'")
-
 	for key, value := range test.Headers {
 		parts = append(parts, fmt.Sprintf("-H '%s: %s'", key, value))
+	}
+
+	if test.Body != nil {
+		if bodyStr, ok := test.Body.(string); ok && bodyStr != "" {
+			parts = append(parts, "-H 'Content-Type: application/json'")
+		}
 	}
 
 	if test.RequiresAuth && req.AuthType != "" {
 		switch req.AuthType {
 		case "bearer":
-			if token, ok := req.AuthData["token"]; ok {
-				parts = append(parts, fmt.Sprintf("-H 'Authorization: Bearer %s'", token))
-			}
+			parts = append(parts, "-H 'Authorization: Bearer ${AUTH_TOKEN}'")
 		case "apikey":
 			if keyName, ok := req.AuthData["key_name"]; ok {
-				if keyValue, ok := req.AuthData["key_value"]; ok {
-					parts = append(parts, fmt.Sprintf("-H '%s: %s'", keyName, keyValue))
-				}
+				parts = append(parts, fmt.Sprintf("-H '%s: ${API_KEY_VALUE}'", keyName))
 			}
 		case "basic":
-			if username, ok := req.AuthData["username"]; ok {
-				if password, ok := req.AuthData["password"]; ok {
-					parts = append(parts, fmt.Sprintf("-u '%s:%s'", username, password))
-				}
-			}
+			parts = append(parts, "-u '${AUTH_USER}:${AUTH_PASS}'")
 		}
 	}
 

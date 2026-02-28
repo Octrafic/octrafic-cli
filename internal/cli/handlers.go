@@ -11,6 +11,7 @@ import (
 	"time"
 
 	agent "github.com/Octrafic/octrafic-cli/internal/agents"
+	"github.com/Octrafic/octrafic-cli/internal/core/auth"
 	"github.com/Octrafic/octrafic-cli/internal/core/parser"
 	"github.com/Octrafic/octrafic-cli/internal/core/reporter"
 	"github.com/Octrafic/octrafic-cli/internal/core/tester"
@@ -920,6 +921,18 @@ func (m *TestUIModel) handleExportTests(toolCall agent.ToolCall) tea.Msg {
 		authData["key_value"] = m.currentProject.AuthConfig.KeyValue
 		authData["username"] = m.currentProject.AuthConfig.Username
 		authData["password"] = m.currentProject.AuthConfig.Password
+	} else if m.authProvider != nil {
+		authType = m.authProvider.Type()
+		switch p := m.authProvider.(type) {
+		case *auth.BearerAuth:
+			authData["token"] = p.Token
+		case *auth.APIKeyAuth:
+			authData["key_name"] = p.Key
+			authData["key_value"] = p.Value
+		case *auth.BasicAuth:
+			authData["username"] = p.Username
+			authData["password"] = p.Password
+		}
 	}
 
 	var exportResults []map[string]any

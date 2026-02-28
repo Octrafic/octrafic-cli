@@ -15,31 +15,24 @@ func (e *PytestExporter) FileExtension() string {
 func (e *PytestExporter) Export(req ExportRequest) error {
 	var script strings.Builder
 
+	script.WriteString("import os\n")
 	script.WriteString("import requests\n")
 	script.WriteString("import pytest\n\n")
 	fmt.Fprintf(&script, "BASE_URL = \"%s\"\n\n", req.BaseURL)
 
 	if req.AuthType != "" {
-		script.WriteString("# Authentication configuration\n")
+		script.WriteString("# Set credentials via environment variables before running\n")
 		switch req.AuthType {
 		case "bearer":
-			if token, ok := req.AuthData["token"]; ok {
-				fmt.Fprintf(&script, "AUTH_TOKEN = \"%s\"\n", token)
-			}
+			script.WriteString("AUTH_TOKEN = os.environ[\"AUTH_TOKEN\"]\n")
 		case "apikey":
 			if keyName, ok := req.AuthData["key_name"]; ok {
-				if keyValue, ok := req.AuthData["key_value"]; ok {
-					fmt.Fprintf(&script, "API_KEY_NAME = \"%s\"\n", keyName)
-					fmt.Fprintf(&script, "API_KEY_VALUE = \"%s\"\n", keyValue)
-				}
+				fmt.Fprintf(&script, "API_KEY_NAME = \"%s\"\n", keyName)
+				script.WriteString("API_KEY_VALUE = os.environ[\"API_KEY_VALUE\"]\n")
 			}
 		case "basic":
-			if username, ok := req.AuthData["username"]; ok {
-				if password, ok := req.AuthData["password"]; ok {
-					fmt.Fprintf(&script, "AUTH_USER = \"%s\"\n", username)
-					fmt.Fprintf(&script, "AUTH_PASS = \"%s\"\n", password)
-				}
-			}
+			script.WriteString("AUTH_USER = os.environ[\"AUTH_USER\"]\n")
+			script.WriteString("AUTH_PASS = os.environ[\"AUTH_PASS\"]\n")
 		}
 		script.WriteString("\n")
 	}
@@ -50,9 +43,17 @@ func (e *PytestExporter) Export(req ExportRequest) error {
 		fmt.Fprintf(&script, "    \"\"\"%s %s\"\"\"\n", test.Method, test.Endpoint)
 		fmt.Fprintf(&script, "    url = BASE_URL + \"%s\"\n", test.Endpoint)
 
-		script.WriteString("    headers = {\"Content-Type\": \"application/json\"")
+		hasBody := test.Body != nil
+		if bodyStr, ok := test.Body.(string); ok && bodyStr == "" {
+			hasBody = false
+		}
+		if hasBody {
+			script.WriteString("    headers = {\"Content-Type\": \"application/json\"")
+		} else {
+			script.WriteString("    headers = {")
+		}
 		for key, value := range test.Headers {
-			fmt.Fprintf(&script, ", \"%s\": \"%s\"", key, value)
+			fmt.Fprintf(&script, "\"%s\": \"%s\", ", key, value)
 		}
 		script.WriteString("}\n")
 

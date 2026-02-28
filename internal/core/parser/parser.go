@@ -172,10 +172,15 @@ func parseOpenAPI(content []byte) (*Specification, error) {
 		}
 	}
 
+	globalSecurity := hasSecurityRequirement(openapi["security"])
+
 	if paths, ok := openapi["paths"].(map[string]any); ok {
 		for path, methods := range paths {
 			if methodMap, ok := methods.(map[string]any); ok {
 				for method, details := range methodMap {
+					if method == "parameters" || method == "summary" || method == "description" {
+						continue
+					}
 					endpoint := Endpoint{
 						Method:          strings.ToUpper(method),
 						Path:            path,
@@ -191,6 +196,12 @@ func parseOpenAPI(content []byte) (*Specification, error) {
 							if endpoint.Description == "" {
 								endpoint.Description = summary
 							}
+						}
+
+						if _, hasSecurity := detailsMap["security"]; hasSecurity {
+							endpoint.RequiresAuth = hasSecurityRequirement(detailsMap["security"])
+						} else {
+							endpoint.RequiresAuth = globalSecurity
 						}
 
 						if responses, ok := detailsMap["responses"].(map[string]any); ok {
@@ -215,6 +226,21 @@ func parseOpenAPI(content []byte) (*Specification, error) {
 	}
 
 	return spec, nil
+}
+
+// hasSecurityRequirement returns true if the security value is a non-empty array
+// containing at least one non-empty security requirement object.
+func hasSecurityRequirement(v any) bool {
+	reqs, ok := v.([]any)
+	if !ok || len(reqs) == 0 {
+		return false
+	}
+	for _, req := range reqs {
+		if m, ok := req.(map[string]any); ok && len(m) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // extractResponseSchema pulls the JSON schema from a response object.

@@ -109,20 +109,16 @@ func (e *PostmanExporter) buildHeaders(test TestData, req ExportRequest) []map[s
 	if test.RequiresAuth && req.AuthType != "" {
 		switch req.AuthType {
 		case "bearer":
-			if token, ok := req.AuthData["token"]; ok {
-				headers = append(headers, map[string]interface{}{
-					"key":   "Authorization",
-					"value": "Bearer " + token,
-				})
-			}
+			headers = append(headers, map[string]interface{}{
+				"key":   "Authorization",
+				"value": "Bearer {{AUTH_TOKEN}}",
+			})
 		case "apikey":
 			if keyName, ok := req.AuthData["key_name"]; ok {
-				if keyValue, ok := req.AuthData["key_value"]; ok {
-					headers = append(headers, map[string]interface{}{
-						"key":   keyName,
-						"value": keyValue,
-					})
-				}
+				headers = append(headers, map[string]interface{}{
+					"key":   keyName,
+					"value": "{{API_KEY_VALUE}}",
+				})
 			}
 		}
 	}
