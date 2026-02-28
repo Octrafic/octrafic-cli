@@ -137,13 +137,6 @@ func GetActiveLLMConfig() (provider, apiKey, baseURL, modelName string) {
 	if provider == "" {
 		provider = "claude"
 	}
-	if apiKey == "" {
-		if provider == "openai" || provider == "openrouter" {
-			apiKey = os.Getenv("OPENAI_API_KEY")
-		} else {
-			apiKey = os.Getenv("ANTHROPIC_API_KEY")
-		}
-	}
 
 	return provider, apiKey, baseURL, modelName
 }
