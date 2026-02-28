@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Octrafic/octrafic-cli/internal/agents"
+	agent "github.com/Octrafic/octrafic-cli/internal/agents"
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	tea "github.com/charmbracelet/bubbletea"
@@ -91,9 +91,9 @@ func (m *TestUIModel) shouldAskForConfirmation(toolName string) bool {
 	// Tools that are safe and don't need confirmation
 	// ExecuteTestGroup is safe - user already approved the plan via checkboxes
 	safeTools := map[string]bool{
-		"GenerateTestPlan": true, // Planning is safe, doesn't execute anything
-		"ExecuteTestGroup": true, // Plan was already approved via checkboxes
-		"GenerateReport":   true, // Generating a report is safe
+		agent.ToolGenerateTestPlan: true, // Planning is safe, doesn't execute anything
+		agent.ToolExecuteTestGroup: true, // Plan was already approved via checkboxes
+		agent.ToolGenerateReport:   true, // Generating a report is safe
 	}
 
 	return !safeTools[toolName]
@@ -328,15 +328,15 @@ func (m *TestUIModel) loadConversationHistory() error {
 			if toolName != "" {
 				displayName := ""
 				switch toolName {
-				case "get_endpoints_details":
+				case agent.ToolGetEndpointsDetails:
 					displayName = "Getting endpoint details"
-				case "GenerateTestPlan":
+				case agent.ToolGenerateTestPlan:
 					displayName = "Generated test cases"
-				case "ExecuteTestGroup":
+				case agent.ToolExecuteTestGroup:
 					displayName = "Executing tests"
-				case "GenerateReport":
+				case agent.ToolGenerateReport:
 					displayName = "Generating PDF report"
-				case "ExecuteTest":
+				case agent.ToolExecuteTest:
 					displayName = "Executing test"
 				default:
 					displayName = fmt.Sprintf("Tool: %s", toolName)

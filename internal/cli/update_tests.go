@@ -64,7 +64,7 @@ func handleGenerateTestPlanResult(m *TestUIModel, msg generateTestPlanResultMsg)
 		toolID := m.currentTestToolID
 		funcResp := &agent.FunctionResponseData{
 			ID:   toolID,
-			Name: "GenerateTestPlan",
+			Name: agent.ToolGenerateTestPlan,
 			Response: map[string]any{
 				"status":     "tests_generated",
 				"test_count": len(testCases),

@@ -2,15 +2,16 @@ package cli
 
 import (
 	"fmt"
-	"github.com/Octrafic/octrafic-cli/internal/agents"
+	"strings"
+	"time"
+
+	agent "github.com/Octrafic/octrafic-cli/internal/agents"
 	"github.com/Octrafic/octrafic-cli/internal/config"
 	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
 	"github.com/Octrafic/octrafic-cli/internal/core/auth"
 	"github.com/Octrafic/octrafic-cli/internal/core/tester"
 	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"github.com/Octrafic/octrafic-cli/internal/updater"
-	"strings"
-	"time"
 
 	"github.com/Octrafic/octrafic-cli/internal/ui/textarea"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -446,7 +447,7 @@ func (m *TestUIModel) View() string {
 		s.WriteString(lipgloss.NewStyle().Foreground(Theme.Warning).Bold(true).Render("Execute tool: "+toolName) + "\n")
 
 		// Show test details if executing a test
-		if strings.HasPrefix(toolName, "ExecuteTest") {
+		if strings.HasPrefix(toolName, agent.ToolExecuteTest) {
 			// Find next pending test to show details
 			for _, test := range m.tests {
 				if test.Status == "pending" {

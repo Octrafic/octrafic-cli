@@ -1277,7 +1277,7 @@ func handleTestPlanState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 		toolID := ""
-		toolName := "ExecuteTestGroup"
+		toolName := agent.ToolExecuteTestGroup
 		if m.pendingTestGroupToolCall != nil {
 			toolID = m.pendingTestGroupToolCall.ID
 			toolName = m.pendingTestGroupToolCall.Name
@@ -1337,7 +1337,7 @@ func handleConfirmationState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd
 			m.lastMessageRole = "assistant"
 			return m, nil
 		default:
-			isExecuteTest := m.pendingToolCall != nil && strings.HasPrefix(m.pendingToolCall.Name, "ExecuteTest")
+			isExecuteTest := m.pendingToolCall != nil && strings.HasPrefix(m.pendingToolCall.Name, agent.ToolExecuteTest)
 			m.pendingToolCall = nil
 
 			if isExecuteTest {
@@ -1359,7 +1359,7 @@ func handleConfirmationState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd
 					}
 				}
 				if hasPendingTests {
-					toolCall := agent.ToolCall{Name: "ExecuteTest"}
+					toolCall := agent.ToolCall{Name: agent.ToolExecuteTest}
 					m.pendingToolCall = &toolCall
 					m.confirmationChoice = 0
 					m.agentState = StateAskingConfirmation
@@ -1456,9 +1456,9 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 		m.streamedToolCalls = m.streamedToolCalls[1:]
 
 		switch toolCall.Name {
-		case "get_endpoints_details":
+		case agent.ToolGetEndpointsDetails:
 			m.currentTestToolID = toolCall.ID
-			m.currentTestToolName = "get_endpoints_details"
+			m.currentTestToolName = agent.ToolGetEndpointsDetails
 			m.agentState = StateThinking
 
 			if endpointsArg, ok := toolCall.Arguments["endpoints"].([]any); ok {
@@ -1476,7 +1476,7 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 
 			return m, m.executeTool(toolCall)
 
-		case "GenerateTestPlan":
+		case agent.ToolGenerateTestPlan:
 			what, ok := toolCall.Arguments["what"].(string)
 			if !ok || what == "" {
 				m.addMessage(m.subtleStyle.Render("⚠️  GenerateTestPlan missing 'what' parameter"))
@@ -1489,7 +1489,7 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 			}
 
 			m.currentTestToolID = toolCall.ID
-			m.currentTestToolName = "GenerateTestPlan"
+			m.currentTestToolName = agent.ToolGenerateTestPlan
 
 			m.agentState = StateUsingTool
 			m.animationFrame = 0
@@ -1517,16 +1517,16 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 				},
 			)
 
-		case "ExecuteTestGroup":
+		case agent.ToolExecuteTestGroup:
 			m.currentTestToolID = toolCall.ID
-			m.currentTestToolName = "ExecuteTestGroup"
+			m.currentTestToolName = agent.ToolExecuteTestGroup
 
 			m.agentState = StateProcessing
 			return m, m.executeTool(toolCall)
 
-		case "ExportTests":
+		case agent.ToolExportTests:
 			m.currentTestToolID = toolCall.ID
-			m.currentTestToolName = "ExportTests"
+			m.currentTestToolName = agent.ToolExportTests
 
 			exportsArg, _ := toolCall.Arguments["exports"].([]any)
 			formatCount := len(exportsArg)
@@ -1538,9 +1538,9 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
 			return m, tea.Batch(animationTick(), m.executeTool(toolCall))
 
-		case "GenerateReport":
+		case agent.ToolGenerateReport:
 			m.currentTestToolID = toolCall.ID
-			m.currentTestToolName = "GenerateReport"
+			m.currentTestToolName = agent.ToolGenerateReport
 
 			showToolWidget(m, "Generating PDF report", "")
 			m.agentState = StateUsingTool
@@ -1548,9 +1548,9 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
 			return m, tea.Batch(animationTick(), m.executeTool(toolCall))
 
-		case "wait":
+		case agent.ToolWait:
 			m.currentTestToolID = toolCall.ID
-			m.currentTestToolName = "wait"
+			m.currentTestToolName = agent.ToolWait
 
 			seconds := 5
 			if s, ok := toolCall.Arguments["seconds"].(float64); ok {
@@ -1689,7 +1689,7 @@ func handleShowTestSelection(m *TestUIModel, msg showTestSelectionMsg) (tea.Mode
 		}
 
 		toolID := ""
-		toolName := "ExecuteTestGroup"
+		toolName := agent.ToolExecuteTestGroup
 		if m.pendingTestGroupToolCall != nil {
 			toolID = m.pendingTestGroupToolCall.ID
 			toolName = m.pendingTestGroupToolCall.Name
