@@ -49,6 +49,7 @@ octrafic
 
 **Getting Started**
 - [Introduction](https://docs.octrafic.com/getting-started/introduction.html)
+- [Installation](https://docs.octrafic.com/getting-started/installation.html)
 - [Quick Start](https://docs.octrafic.com/getting-started/quick-start.html)
 
 **Guides**
