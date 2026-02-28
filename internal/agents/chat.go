@@ -253,7 +253,10 @@ Parameters:
 
 ## ExecuteTestGroup
 Execute a group of tests against the API. Call AFTER GenerateTestPlan.
-Response includes: status_code, response_body, headers (check for Retry-After), duration_ms, passed.
+Response includes per test: status_code, response_body, duration_ms, passed, schema_valid, schema_errors.
+- passed=false → status code did not match expected
+- schema_valid=false → response body does not match the OpenAPI schema (even if passed=true)
+- Always report schema_errors to the user when schema_valid=false
 
 ## wait
 Wait N seconds before proceeding. Use when:
@@ -262,12 +265,14 @@ Wait N seconds before proceeding. Use when:
 - You want to avoid hitting rate limits between test groups
 
 ## GenerateReport
-Generate PDF report from test results. Call AFTER tests are executed.
+Generate PDF report from test results.
+IMPORTANT: Only call this when the user explicitly asks for a report (e.g. "generate report", "save report", "export PDF"). Never call it automatically after tests.
 
 # Behavior
 - User mentions endpoint (e.g., "users", "auth") → fetch details, show info OR generate tests
 - User says "test X" → fetch details, generate & run tests
 - User says "list endpoints" → show list from available endpoints (no tool call)
+- User says "generate report" / "save PDF" / "export report" → call GenerateReport
 - After 429 response → call wait(seconds=N) where N comes from Retry-After header or default to 5
 - requires_auth=true → CLI adds auth header, requires_auth=false → no auth`, baseURL, endpointsInfo)
 }

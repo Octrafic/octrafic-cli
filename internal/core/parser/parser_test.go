@@ -502,3 +502,122 @@ func TestDetectFormatFromContent(t *testing.T) {
 		}
 	}
 }
+
+func TestResolveRefs_NoRef(t *testing.T) {
+	schema := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"id": map[string]any{"type": "string"},
+		},
+	}
+	result := resolveRefs(schema, nil, 0)
+	if result["type"] != "object" {
+		t.Errorf("expected type=object, got %v", result["type"])
+	}
+}
+
+func TestResolveRefs_WithRef(t *testing.T) {
+	definitions := map[string]any{
+		"User": map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"name": map[string]any{"type": "string"},
+			},
+		},
+	}
+	schema := map[string]any{"$ref": "#/components/schemas/User"}
+	result := resolveRefs(schema, definitions, 0)
+	if result["type"] != "object" {
+		t.Errorf("expected resolved type=object, got %v", result["type"])
+	}
+}
+
+func TestResolveRefs_UnknownRef(t *testing.T) {
+	schema := map[string]any{"$ref": "#/components/schemas/Missing"}
+	result := resolveRefs(schema, map[string]any{}, 0)
+	if result["$ref"] == nil {
+		t.Error("expected $ref to remain when definition not found")
+	}
+}
+
+func TestResolveRefs_DepthLimit(t *testing.T) {
+	schema := map[string]any{"type": "string"}
+	result := resolveRefs(schema, nil, 11)
+	if result["type"] != "string" {
+		t.Errorf("expected schema returned as-is at depth limit, got %v", result)
+	}
+}
+
+func TestExtractResponseSchema_OpenAPI3(t *testing.T) {
+	response := map[string]any{
+		"content": map[string]any{
+			"application/json": map[string]any{
+				"schema": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"id": map[string]any{"type": "integer"},
+					},
+				},
+			},
+		},
+	}
+	schema := extractResponseSchema(response, nil)
+	if schema == nil {
+		t.Fatal("expected non-nil schema")
+	}
+	if schema["type"] != "object" {
+		t.Errorf("expected type=object, got %v", schema["type"])
+	}
+}
+
+func TestExtractResponseSchema_Swagger2(t *testing.T) {
+	response := map[string]any{
+		"schema": map[string]any{
+			"type": "array",
+			"items": map[string]any{
+				"type": "object",
+			},
+		},
+	}
+	schema := extractResponseSchema(response, nil)
+	if schema == nil {
+		t.Fatal("expected non-nil schema")
+	}
+	if schema["type"] != "array" {
+		t.Errorf("expected type=array, got %v", schema["type"])
+	}
+}
+
+func TestExtractResponseSchema_NoSchema(t *testing.T) {
+	schema := extractResponseSchema(map[string]any{}, nil)
+	if schema != nil {
+		t.Errorf("expected nil for response with no schema, got %v", schema)
+	}
+}
+
+func TestExtractResponseSchema_WithRef(t *testing.T) {
+	definitions := map[string]any{
+		"Product": map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"price": map[string]any{"type": "number"},
+			},
+		},
+	}
+	response := map[string]any{
+		"content": map[string]any{
+			"application/json": map[string]any{
+				"schema": map[string]any{
+					"$ref": "#/components/schemas/Product",
+				},
+			},
+		},
+	}
+	schema := extractResponseSchema(response, definitions)
+	if schema == nil {
+		t.Fatal("expected non-nil schema after ref resolution")
+	}
+	if schema["type"] != "object" {
+		t.Errorf("expected resolved type=object, got %v", schema["type"])
+	}
+}

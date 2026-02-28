@@ -23,14 +23,15 @@ type Specification struct {
 }
 
 type Endpoint struct {
-	Method       string            `json:"method"`
-	Path         string            `json:"path"`
-	Description  string            `json:"description"`
-	Parameters   []Parameter       `json:"parameters,omitempty"`
-	RequestBody  string            `json:"request_body,omitempty"`
-	Responses    map[string]string `json:"responses,omitempty"`
-	RequiresAuth bool              `json:"requires_auth"`
-	AuthType     string            `json:"auth_type"` // "bearer", "basic", "apikey", "none"
+	Method          string                    `json:"method"`
+	Path            string                    `json:"path"`
+	Description     string                    `json:"description"`
+	Parameters      []Parameter               `json:"parameters,omitempty"`
+	RequestBody     string                    `json:"request_body,omitempty"`
+	Responses       map[string]string         `json:"responses,omitempty"`
+	ResponseSchemas map[string]map[string]any `json:"response_schemas,omitempty"`
+	RequiresAuth    bool                      `json:"requires_auth"`
+	AuthType        string                    `json:"auth_type"` // "bearer", "basic", "apikey", "none"
 }
 
 type Parameter struct {
@@ -157,14 +158,29 @@ func parseOpenAPI(content []byte) (*Specification, error) {
 		spec.Version = version
 	}
 
+	definitions := make(map[string]any)
+	if components, ok := openapi["components"].(map[string]any); ok {
+		if schemas, ok := components["schemas"].(map[string]any); ok {
+			for k, v := range schemas {
+				definitions[k] = v
+			}
+		}
+	}
+	if defs, ok := openapi["definitions"].(map[string]any); ok {
+		for k, v := range defs {
+			definitions[k] = v
+		}
+	}
+
 	if paths, ok := openapi["paths"].(map[string]any); ok {
 		for path, methods := range paths {
 			if methodMap, ok := methods.(map[string]any); ok {
 				for method, details := range methodMap {
 					endpoint := Endpoint{
-						Method:    strings.ToUpper(method),
-						Path:      path,
-						Responses: make(map[string]string),
+						Method:          strings.ToUpper(method),
+						Path:            path,
+						Responses:       make(map[string]string),
+						ResponseSchemas: make(map[string]map[string]any),
 					}
 
 					if detailsMap, ok := details.(map[string]any); ok {
@@ -176,6 +192,20 @@ func parseOpenAPI(content []byte) (*Specification, error) {
 								endpoint.Description = summary
 							}
 						}
+
+						if responses, ok := detailsMap["responses"].(map[string]any); ok {
+							for statusCode, respData := range responses {
+								if respMap, ok := respData.(map[string]any); ok {
+									if desc, ok := respMap["description"].(string); ok {
+										endpoint.Responses[statusCode] = desc
+									}
+									schema := extractResponseSchema(respMap, definitions)
+									if schema != nil {
+										endpoint.ResponseSchemas[statusCode] = schema
+									}
+								}
+							}
+						}
 					}
 
 					spec.Endpoints = append(spec.Endpoints, endpoint)
@@ -185,6 +215,63 @@ func parseOpenAPI(content []byte) (*Specification, error) {
 	}
 
 	return spec, nil
+}
+
+// extractResponseSchema pulls the JSON schema from a response object.
+// Handles both OpenAPI 3.x (content/application/json/schema) and Swagger 2.0 (schema).
+func extractResponseSchema(response map[string]any, definitions map[string]any) map[string]any {
+	if content, ok := response["content"].(map[string]any); ok {
+		for mediaType, mediaData := range content {
+			if strings.Contains(mediaType, "json") {
+				if mediaMap, ok := mediaData.(map[string]any); ok {
+					if schema, ok := mediaMap["schema"].(map[string]any); ok {
+						return resolveRefs(schema, definitions, 0)
+					}
+				}
+			}
+		}
+	}
+	if schema, ok := response["schema"].(map[string]any); ok {
+		return resolveRefs(schema, definitions, 0)
+	}
+	return nil
+}
+
+// resolveRefs recursively resolves $ref pointers in a JSON schema.
+// depth limits recursion to guard against circular references.
+func resolveRefs(schema map[string]any, definitions map[string]any, depth int) map[string]any {
+	if depth > 10 {
+		return schema
+	}
+	if ref, ok := schema["$ref"].(string); ok {
+		parts := strings.Split(ref, "/")
+		name := parts[len(parts)-1]
+		if def, ok := definitions[name].(map[string]any); ok {
+			return resolveRefs(def, definitions, depth+1)
+		}
+		return schema
+	}
+
+	result := make(map[string]any, len(schema))
+	for k, v := range schema {
+		switch val := v.(type) {
+		case map[string]any:
+			result[k] = resolveRefs(val, definitions, depth+1)
+		case []any:
+			resolved := make([]any, len(val))
+			for i, item := range val {
+				if itemMap, ok := item.(map[string]any); ok {
+					resolved[i] = resolveRefs(itemMap, definitions, depth+1)
+				} else {
+					resolved[i] = item
+				}
+			}
+			result[k] = resolved
+		default:
+			result[k] = v
+		}
+	}
+	return result
 }
 
 func isHTTPMethod(s string) bool {

@@ -212,11 +212,20 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 		})
 	} else {
 		passed := result.StatusCode == expectedStatus
+		schemaErrors := m.validateResponseSchema(method, endpoint, result.StatusCode, result.ResponseBody)
+		schemaValid := len(schemaErrors) == 0
+
 		statusIcon := "✓"
 		statusStyle := m.successStyle
 		if !passed {
 			statusIcon = "✗"
 			statusStyle = m.errorStyle
+			if m.isHeadless {
+				m.headlessExitCode = 1
+			}
+		} else if !schemaValid {
+			statusIcon = "⚠"
+			statusStyle = lipgloss.NewStyle().Foreground(Theme.Warning)
 			if m.isHeadless {
 				m.headlessExitCode = 1
 			}
@@ -231,6 +240,14 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 		m.addMessage(fmt.Sprintf("  %s %s %s%s", statusStyle.Render(statusIcon), methodFormatted, endpoint, authIndicator))
 		m.addMessage(m.subtleStyle.Render(statusMsg))
 
+		if !schemaValid {
+			schemaStyle := lipgloss.NewStyle().Foreground(Theme.Warning)
+			m.addMessage(schemaStyle.Render("    Schema mismatch:"))
+			for _, se := range schemaErrors {
+				m.addMessage(schemaStyle.Render("      · " + se))
+			}
+		}
+
 		m.testGroupResults = append(m.testGroupResults, map[string]any{
 			"method":          method,
 			"endpoint":        endpoint,
@@ -240,6 +257,8 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 			"duration_ms":     result.Duration.Milliseconds(),
 			"requires_auth":   requiresAuth,
 			"passed":          passed,
+			"schema_valid":    schemaValid,
+			"schema_errors":   schemaErrors,
 		})
 	}
 	m.testGroupCompletedCount++
