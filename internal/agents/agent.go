@@ -3,11 +3,12 @@ package agent
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/Octrafic/octrafic-cli/internal/config"
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 	"github.com/Octrafic/octrafic-cli/internal/llm"
 	"github.com/Octrafic/octrafic-cli/internal/llm/common"
-	"strings"
 )
 
 const (
@@ -110,8 +111,18 @@ Return a JSON object with tests array. Each test:
   "method": "GET",
   "endpoint": "/users",
   "body": null,
-  "requires_auth": true
+  "requires_auth": true,
+  "expected_status": 200
 }
+
+Always set expected_status to the correct HTTP status code:
+- 200 for successful GET, PUT, PATCH
+- 201 for successful POST that creates a resource
+- 204 for successful DELETE
+- 400 for bad request / validation error tests
+- 401 for unauthorized tests
+- 404 for not found tests
+CRITICAL: You MUST include the "expected_status" field in EVERY test case object. Failure to do so will result in an error. Do not default to 200 if you are testing an error condition.
 
 Return pure JSON only - no markdown, no comments.`
 	messages := []ChatMessage{

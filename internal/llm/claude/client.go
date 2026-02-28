@@ -10,7 +10,6 @@ import (
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
-	"github.com/invopop/jsonschema"
 	"go.uber.org/zap"
 )
 
@@ -103,37 +102,37 @@ func NewClientWithConfig(apiKey, model string) (*Client, error) {
 }
 
 // generateToolInputSchema creates a ToolInputSchemaParam from a map
+// It preserves the full JSON schema structure including nested objects,
+// arrays with items, required fields, enums, etc.
 func generateToolInputSchema(inputSchema map[string]interface{}) anthropic.ToolInputSchemaParam {
-	properties := make(map[string]jsonschema.Schema)
+	result := anthropic.ToolInputSchemaParam{}
 
-	// Extract the actual properties from the schema (inputSchema has structure: {type: "object", properties: {...}, required: [...]})
-	propertiesRaw, ok := inputSchema["properties"].(map[string]interface{})
-	if !ok {
-		return anthropic.ToolInputSchemaParam{}
+	if props, ok := inputSchema["properties"]; ok {
+		result.Properties = props
 	}
 
-	for propName, propDef := range propertiesRaw {
-		propMap, ok := propDef.(map[string]interface{})
-		if !ok {
+	if req, ok := inputSchema["required"].([]interface{}); ok {
+		required := make([]string, 0, len(req))
+		for _, r := range req {
+			if s, ok := r.(string); ok {
+				required = append(required, s)
+			}
+		}
+		result.Required = required
+	}
+
+	extras := make(map[string]any)
+	for key, val := range inputSchema {
+		if key == "type" || key == "properties" || key == "required" {
 			continue
 		}
-
-		// Create schema for this property - Type is a plain string
-		schema := jsonschema.Schema{}
-		if typ, ok := propMap["type"].(string); ok {
-			schema.Type = typ
-		}
-
-		if desc, ok := propMap["description"].(string); ok {
-			schema.Description = desc
-		}
-
-		properties[propName] = schema
+		extras[key] = val
+	}
+	if len(extras) > 0 {
+		result.ExtraFields = extras
 	}
 
-	return anthropic.ToolInputSchemaParam{
-		Properties: properties,
-	}
+	return result
 }
 
 type StreamCallback func(reasoning string, isThought bool)

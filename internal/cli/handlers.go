@@ -3,19 +3,20 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Octrafic/octrafic-cli/internal/agents"
-	"github.com/Octrafic/octrafic-cli/internal/core/parser"
-	"github.com/Octrafic/octrafic-cli/internal/core/reporter"
-	"github.com/Octrafic/octrafic-cli/internal/core/tester"
-	"github.com/Octrafic/octrafic-cli/internal/exporter"
-	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
-	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 	"maps"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	agent "github.com/Octrafic/octrafic-cli/internal/agents"
+	"github.com/Octrafic/octrafic-cli/internal/core/parser"
+	"github.com/Octrafic/octrafic-cli/internal/core/reporter"
+	"github.com/Octrafic/octrafic-cli/internal/core/tester"
+	"github.com/Octrafic/octrafic-cli/internal/exporter"
+	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
+	"github.com/Octrafic/octrafic-cli/internal/infra/storage"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -419,6 +420,16 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 				}
 			}
 
+			for _, t := range tests {
+				if _, ok := t["expected_status"]; !ok {
+					return toolResultMsg{
+						toolID:   toolCall.ID,
+						toolName: toolCall.Name,
+						err:      fmt.Errorf("every test MUST include 'expected_status' field (e.g. 200, 201, 204, 400, 401, 404). Re-call ExecuteTestGroup with expected_status set for each test"),
+					}
+				}
+			}
+
 			return showTestSelectionMsg{
 				tests:    tests,
 				toolCall: toolCall,
@@ -472,9 +483,6 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 			if p, ok := resultMap["passed"].(bool); ok {
 				passed = p
 			} else {
-				if expectedStatus == 0 {
-					expectedStatus = 200
-				}
 				passed = statusCode == expectedStatus
 			}
 
@@ -558,9 +566,6 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 				if p, ok := testResult["passed"].(bool); ok {
 					passed = p
 				} else {
-					if expectedStatus == 0 {
-						expectedStatus = 200
-					}
 					passed = statusCode == expectedStatus
 				}
 

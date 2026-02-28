@@ -74,7 +74,7 @@ Pure JSON, no markdown:
       "description": "Brief description",
       "method": "GET",
       "endpoint": "/exact/path",
-      "expected_status": 200,
+      "expected_status": 404,
       "reasoning": "Why this test matters",
       "requires_auth": true
     }

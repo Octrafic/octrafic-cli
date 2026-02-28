@@ -2,9 +2,9 @@ package cli
 
 import (
 	"fmt"
-	"github.com/Octrafic/octrafic-cli/internal/agents"
 	"strings"
 
+	agent "github.com/Octrafic/octrafic-cli/internal/agents"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -25,12 +25,13 @@ func handleGenerateTestPlanResult(m *TestUIModel, msg generateTestPlanResultMsg)
 		})
 
 		testCases = append(testCases, map[string]any{
-			"method":        bt.TestCase.Method,
-			"endpoint":      bt.TestCase.Endpoint,
-			"headers":       bt.TestCase.Headers,
-			"body":          bt.TestCase.Body,
-			"requires_auth": bt.TestCase.RequiresAuth,
-			"description":   bt.TestCase.Description,
+			"method":          bt.TestCase.Method,
+			"endpoint":        bt.TestCase.Endpoint,
+			"headers":         bt.TestCase.Headers,
+			"body":            bt.TestCase.Body,
+			"requires_auth":   bt.TestCase.RequiresAuth,
+			"description":     bt.TestCase.Description,
+			"expected_status": bt.TestCase.ExpectedStatus,
 		})
 	}
 
@@ -164,11 +165,15 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 		requiresAuth = ra
 	}
 
-	expectedStatus := 200
+	expectedStatus := 0
 	if es, ok := testMap["expected_status"].(float64); ok {
 		expectedStatus = int(es)
 	} else if es, ok := testMap["expected_status"].(int); ok {
 		expectedStatus = es
+	}
+
+	if expectedStatus == 0 {
+		expectedStatus = 200
 	}
 
 	headers := make(map[string]string)
