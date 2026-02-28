@@ -12,7 +12,7 @@ type ClaudeProvider struct {
 
 // NewClaudeProvider creates a new Claude provider
 func NewClaudeProvider(config common.ProviderConfig) (*ClaudeProvider, error) {
-	client, err := NewClientWithConfig(config.APIKey, config.Model)
+	client, err := NewClientWithConfig(config.APIKey, config.Model, config.BaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Claude client: %w", err)
 	}

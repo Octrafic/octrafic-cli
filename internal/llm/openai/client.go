@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 
 	"regexp"
@@ -191,28 +190,12 @@ type Client struct {
 	ctx        context.Context
 }
 
-// NewClient creates a new client from environment variables
-func NewClient() (*Client, error) {
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		return nil, fmt.Errorf("OPENAI_API_KEY not set")
-	}
-
-	model := os.Getenv("SEARCH_SPEC_MODEL")
-	if model == "" {
-		model = "gpt-4o-mini"
-	}
-
-	baseURL := os.Getenv("OPENAI_BASE_URL")
-	if baseURL == "" {
-		baseURL = "https://api.openai.com/v1"
-	}
-
-	return NewClientWithConfig(apiKey, model, baseURL)
-}
-
 // NewClientWithConfig creates a new client with explicit configuration
 func NewClientWithConfig(apiKey, model, baseURL string) (*Client, error) {
+	if apiKey == "" {
+		return nil, fmt.Errorf("openai API key is required")
+	}
+
 	if model == "" {
 		return nil, fmt.Errorf("model is required")
 	}
