@@ -203,7 +203,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 	return func() tea.Msg {
 		time.Sleep(300 * time.Millisecond)
 
-		if toolCall.Name == "get_endpoints_details" {
+		if toolCall.Name == agent.ToolGetEndpointsDetails {
 			endpointsArg, ok := toolCall.Arguments["endpoints"]
 			if !ok {
 				return toolResultMsg{
@@ -273,7 +273,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 			}
 		}
 
-		if toolCall.Name == "ExecuteTest" {
+		if toolCall.Name == agent.ToolExecuteTest {
 			method, _ := toolCall.Arguments["method"].(string)
 			endpoint, _ := toolCall.Arguments["endpoint"].(string)
 
@@ -352,7 +352,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 			}
 		}
 
-		if toolCall.Name == "GenerateReport" {
+		if toolCall.Name == agent.ToolGenerateReport {
 			reportContent, _ := toolCall.Arguments["report_content"].(string)
 			if reportContent == "" {
 				return toolResultMsg{
@@ -385,7 +385,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 			}
 		}
 
-		if toolCall.Name == "ExecuteTestGroup" {
+		if toolCall.Name == agent.ToolExecuteTestGroup {
 			testsArg, ok := toolCall.Arguments["tests"]
 			if !ok {
 				return toolResultMsg{
@@ -437,11 +437,11 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 			}
 		}
 
-		if toolCall.Name == "ExportTests" {
+		if toolCall.Name == agent.ToolExportTests {
 			return m.handleExportTests(toolCall)
 		}
 
-		if toolCall.Name == "wait" {
+		if toolCall.Name == agent.ToolWait {
 			seconds := 5
 			if s, ok := toolCall.Arguments["seconds"].(float64); ok {
 				seconds = int(s)
@@ -471,7 +471,7 @@ func (m *TestUIModel) executeTool(toolCall agent.ToolCall) tea.Cmd {
 }
 
 func (m *TestUIModel) handleToolResult(toolName string, toolID string, result any) tea.Cmd {
-	if toolName == "ExecuteTest" {
+	if toolName == agent.ToolExecuteTest {
 		if resultMap, ok := result.(map[string]any); ok {
 			method, _ := resultMap["method"].(string)
 			endpoint, _ := resultMap["endpoint"].(string)
@@ -526,7 +526,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
 						ID:       toolID,
-						Name:     "ExecuteTest",
+						Name:     agent.ToolExecuteTest,
 						Response: resultMap,
 					},
 				}
@@ -542,7 +542,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 		}
 	}
 
-	if toolName == "ExecuteTestGroup" {
+	if toolName == agent.ToolExecuteTestGroup {
 		// Display results from test group
 		if resultMap, ok := result.(map[string]any); ok {
 			count, _ := resultMap["count"].(int)
@@ -620,7 +620,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
 						ID:       toolID,
-						Name:     "ExecuteTestGroup",
+						Name:     agent.ToolExecuteTestGroup,
 						Response: resultMap,
 					},
 				}
@@ -636,7 +636,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 		}
 	}
 
-	if toolName == "get_endpoints_details" {
+	if toolName == agent.ToolGetEndpointsDetails {
 		// Add tool result to conversation history as function response
 		if toolID != "" {
 			var resultMap map[string]any
@@ -649,7 +649,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 				Role: "user",
 				FunctionResponse: &agent.FunctionResponseData{
 					ID:       toolID,
-					Name:     "get_endpoints_details",
+					Name:     agent.ToolGetEndpointsDetails,
 					Response: resultMap,
 				},
 			}
@@ -664,7 +664,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 		return nil // No tool_use, so don't send response back
 	}
 
-	if toolName == "GenerateReport" {
+	if toolName == agent.ToolGenerateReport {
 		if resultMap, ok := result.(map[string]any); ok {
 			filePath, _ := resultMap["file_path"].(string)
 
@@ -677,7 +677,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
 						ID:       toolID,
-						Name:     "GenerateReport",
+						Name:     agent.ToolGenerateReport,
 						Response: resultMap,
 					},
 				}
@@ -692,7 +692,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 		}
 	}
 
-	if toolName == "ExportTests" {
+	if toolName == agent.ToolExportTests {
 		if resultMap, ok := result.(map[string]any); ok {
 			testCount, _ := resultMap["test_count"].(int)
 			exports, _ := resultMap["exports"].([]map[string]any)
@@ -725,7 +725,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 					Role: "user",
 					FunctionResponse: &agent.FunctionResponseData{
 						ID:       toolID,
-						Name:     "ExportTests",
+						Name:     agent.ToolExportTests,
 						Response: resultMap,
 					},
 				}
@@ -737,7 +737,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 		}
 	}
 
-	if toolName == "GenerateTestPlan" {
+	if toolName == agent.ToolGenerateTestPlan {
 		// Add tool result to conversation history as function response
 		if toolID != "" {
 			var resultMap map[string]any
@@ -750,7 +750,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 				Role: "user",
 				FunctionResponse: &agent.FunctionResponseData{
 					ID:       toolID,
-					Name:     "GenerateTestPlan",
+					Name:     agent.ToolGenerateTestPlan,
 					Response: resultMap,
 				},
 			}
@@ -765,7 +765,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 		return nil // No tool_use, so don't send response back
 	}
 
-	if toolName == "wait" {
+	if toolName == agent.ToolWait {
 		if toolID != "" {
 			var resultMap map[string]any
 			if r, ok := result.(map[string]any); ok {
@@ -775,7 +775,7 @@ func (m *TestUIModel) handleToolResult(toolName string, toolID string, result an
 				Role: "user",
 				FunctionResponse: &agent.FunctionResponseData{
 					ID:       toolID,
-					Name:     "wait",
+					Name:     agent.ToolWait,
 					Response: resultMap,
 				},
 			}
