@@ -110,8 +110,17 @@ Return a JSON object with tests array. Each test:
   "method": "GET",
   "endpoint": "/users",
   "body": null,
-  "requires_auth": true
+  "requires_auth": true,
+  "expected_status": 200
 }
+
+Always set expected_status to the correct HTTP status code:
+- 200 for successful GET, PUT, PATCH
+- 201 for successful POST that creates a resource
+- 204 for successful DELETE
+- 400 for bad request / validation error tests
+- 401 for unauthorized tests
+- 404 for not found tests
 
 Return pure JSON only - no markdown, no comments.`
 	messages := []ChatMessage{

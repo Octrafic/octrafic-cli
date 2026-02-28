@@ -126,8 +126,12 @@ func getMainAgentTools() []common.Tool {
 									"type":        "boolean",
 									"description": "Whether authentication is required for this test",
 								},
+								"expected_status": map[string]any{
+									"type":        "integer",
+									"description": "Expected HTTP status code. Defaults to 200 if not set. Set this correctly: 201 for POST that creates resources, 204 for DELETE, 400 for bad requests, 401 for unauthorized, 404 for not found, etc.",
+								},
 							},
-							"required": []string{"method", "endpoint", "headers", "body", "requires_auth"},
+							"required": []string{"method", "endpoint", "headers", "body", "requires_auth", "expected_status"},
 						},
 					},
 				},
@@ -257,6 +261,7 @@ Response includes per test: status_code, response_body, duration_ms, passed, sch
 - passed=false → status code did not match expected
 - schema_valid=false → response body does not match the OpenAPI schema (even if passed=true)
 - Always report schema_errors to the user when schema_valid=false
+- expected_status is REQUIRED — always set it based on what the test expects: 200 for GET, 201 for POST that creates, 204 for DELETE, 400 for bad input, 401 for unauthorized, 404 for not found. Never leave it as 200 when testing error cases.
 
 ## wait
 Wait N seconds before proceeding. Use when:

@@ -25,12 +25,13 @@ func handleGenerateTestPlanResult(m *TestUIModel, msg generateTestPlanResultMsg)
 		})
 
 		testCases = append(testCases, map[string]any{
-			"method":        bt.TestCase.Method,
-			"endpoint":      bt.TestCase.Endpoint,
-			"headers":       bt.TestCase.Headers,
-			"body":          bt.TestCase.Body,
-			"requires_auth": bt.TestCase.RequiresAuth,
-			"description":   bt.TestCase.Description,
+			"method":          bt.TestCase.Method,
+			"endpoint":        bt.TestCase.Endpoint,
+			"headers":         bt.TestCase.Headers,
+			"body":            bt.TestCase.Body,
+			"requires_auth":   bt.TestCase.RequiresAuth,
+			"description":     bt.TestCase.Description,
+			"expected_status": bt.TestCase.ExpectedStatus,
 		})
 	}
 
