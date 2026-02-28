@@ -114,6 +114,10 @@ Use assertions to verify specific fields in the response body:
 {"field":"token","op":"contains","value":"Bearer"} — substring
 Operators: eq, neq, exists, not_exists, contains, gt, gte, lt, lte
 
+## ExportTests
+Export API tests to formats strictly when the user requests it (e.g. "save to postman", "export tests to sh file"). 
+Can export combinations of "postman", "pytest" or "sh".
+
 ## wait
 Wait N seconds before proceeding. Use when:
 - You receive a 429 status code

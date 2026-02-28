@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 
@@ -75,17 +74,11 @@ type Tool struct {
 // NewClientWithConfig creates a new Gemini client with explicit API key and model.
 func NewClientWithConfig(apiKey, model string) (*Client, error) {
 	if apiKey == "" {
-		apiKey = os.Getenv("GOOGLE_API_KEY")
-		if apiKey == "" {
-			return nil, fmt.Errorf("GOOGLE_API_KEY not set")
-		}
+		return nil, fmt.Errorf("gemini API key is required")
 	}
 
 	if model == "" {
-		model = os.Getenv("GEMINI_MODEL")
-		if model == "" {
-			model = "gemini-2.5-flash"
-		}
+		model = "gemini-2.5-flash"
 	}
 
 	ctx := context.Background()

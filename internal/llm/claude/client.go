@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/Octrafic/octrafic-cli/internal/infra/logger"
 
@@ -59,25 +58,14 @@ type Tool struct {
 	InputSchema map[string]interface{}
 }
 
-// NewClient creates a new Claude client (uses env vars)
-func NewClient() (*Client, error) {
-	return NewClientWithConfig("", "")
-}
-
-// NewClientWithConfig creates a new Claude client with explicit API key and model
-func NewClientWithConfig(apiKey, model string) (*Client, error) {
+// NewClientWithConfig creates a new Claude client with explicit API key, model and base URL
+func NewClientWithConfig(apiKey, model, baseURL string) (*Client, error) {
 	if apiKey == "" {
-		apiKey = os.Getenv("ANTHROPIC_API_KEY")
-		if apiKey == "" {
-			return nil, fmt.Errorf("ANTHROPIC_API_KEY not set")
-		}
+		return nil, fmt.Errorf("anthropic API key is required")
 	}
 
 	if model == "" {
-		model = os.Getenv("ANTHROPIC_MODEL")
-		if model == "" {
-			model = string(anthropic.ModelClaudeSonnet4_20250514)
-		}
+		model = string(anthropic.ModelClaudeSonnet4_20250514)
 	}
 
 	ctx := context.Background()
@@ -88,7 +76,7 @@ func NewClientWithConfig(apiKey, model string) (*Client, error) {
 	}
 
 	// Add custom base URL if provided (for proxies)
-	if baseURL := os.Getenv("ANTHROPIC_BASE_URL"); baseURL != "" {
+	if baseURL != "" {
 		opts = append(opts, option.WithBaseURL(baseURL))
 	}
 
