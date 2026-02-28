@@ -2,6 +2,7 @@ package reporter
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -215,9 +216,13 @@ func GeneratePDF(markdownContent string, outputPath string) (string, error) {
 	}
 	_ = tmpFile.Close()
 
-	// Convert HTML to PDF using weasyprint
-	cmd := exec.Command("weasyprint", tmpFile.Name(), absPath)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "weasyprint", tmpFile.Name(), absPath)
 	if output, err := cmd.CombinedOutput(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("weasyprint timed out after 30s")
+		}
 		return "", fmt.Errorf("weasyprint failed: %s — %w", string(output), err)
 	}
 
