@@ -17,7 +17,7 @@ type ChatMessage struct {
 }
 
 type FunctionResponseData struct {
-	ID       string         `json:"id"` // tool_use_id from original tool use block
+	ID       string         `json:"id"`
 	Name     string         `json:"name"`
 	Response map[string]any `json:"response"`
 }
@@ -26,16 +26,16 @@ type ChatResponse struct {
 	Message      string     `json:"message"`
 	Reasoning    string     `json:"reasoning,omitempty"`
 	ToolCalls    []ToolCall `json:"tool_calls,omitempty"`
-	TokensUsed   int64      `json:"tokens_used,omitempty"`   // Total tokens (input + output)
-	InputTokens  int64      `json:"input_tokens,omitempty"`  // Input tokens used
-	OutputTokens int64      `json:"output_tokens,omitempty"` // Output tokens used
+	TokensUsed   int64      `json:"tokens_used,omitempty"`
+	InputTokens  int64      `json:"input_tokens,omitempty"`
+	OutputTokens int64      `json:"output_tokens,omitempty"`
 }
 
 type ToolCall struct {
 	ID               string         `json:"id,omitempty"`
 	Name             string         `json:"name"`
 	Arguments        map[string]any `json:"arguments"`
-	ThoughtSignature string         `json:"thought_signature,omitempty"` // base64 encoded []byte (not used by Claude)
+	ThoughtSignature string         `json:"thought_signature,omitempty"`
 }
 
 // ReasoningCallback is called for each chunk as it's streamed

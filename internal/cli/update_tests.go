@@ -340,6 +340,28 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 	return m, runNextTest()
 }
 
+func extractsToAny(extracts []agent.Extract) []any {
+	if len(extracts) == 0 {
+		return nil
+	}
+	out := make([]any, len(extracts))
+	for i, e := range extracts {
+		out[i] = map[string]any{"field": e.Field, "as": e.As}
+	}
+	return out
+}
+
+func assertionsToAny(assertions []agent.Assertion) []any {
+	if len(assertions) == 0 {
+		return nil
+	}
+	out := make([]any, len(assertions))
+	for i, a := range assertions {
+		out[i] = map[string]any{"field": a.Field, "op": a.Op, "value": a.Value}
+	}
+	return out
+}
+
 func toMapsSlice(v any) []map[string]any {
 	raw, ok := v.([]any)
 	if !ok {
