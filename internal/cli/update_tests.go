@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	agent "github.com/Octrafic/octrafic-cli/internal/agents"
+	"github.com/Octrafic/octrafic-cli/internal/core/tester"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -32,6 +34,8 @@ func handleGenerateTestPlanResult(m *TestUIModel, msg generateTestPlanResultMsg)
 			"requires_auth":   bt.TestCase.RequiresAuth,
 			"description":     bt.TestCase.Description,
 			"expected_status": bt.TestCase.ExpectedStatus,
+			"extract":         bt.TestCase.Extract,
+			"assertions":      bt.TestCase.Assertions,
 		})
 	}
 
@@ -97,6 +101,7 @@ func handleStartTestGroup(m *TestUIModel, msg startTestGroupMsg) (tea.Model, tea
 	m.testGroupCompletedCount = 0
 	m.totalTestsInProgress = len(msg.tests)
 	m.testGroupResults = make([]map[string]any, 0, len(msg.tests))
+	m.testVars = make(map[string]string)
 	m.agentState = StateRunningTests
 
 	m.addMessage("")
@@ -106,13 +111,52 @@ func handleStartTestGroup(m *TestUIModel, msg startTestGroupMsg) (tea.Model, tea
 	return m, runNextTest()
 }
 
+// applyVars substitutes {{var}} placeholders with values from m.testVars.
+func (m *TestUIModel) applyVars(s string) string {
+	for k, v := range m.testVars {
+		s = strings.ReplaceAll(s, "{{"+k+"}}", v)
+	}
+	return s
+}
+
+// extractVars runs extract rules against a response body, storing results in m.testVars.
+func (m *TestUIModel) extractVars(body string, extracts []map[string]any) {
+	if len(extracts) == 0 || strings.TrimSpace(body) == "" {
+		return
+	}
+	var parsed any
+	if err := json.Unmarshal([]byte(body), &parsed); err != nil {
+		return
+	}
+	for _, e := range extracts {
+		field, _ := e["field"].(string)
+		as, _ := e["as"].(string)
+		if field == "" || as == "" {
+			continue
+		}
+		val, ok := tester.ResolvePath(parsed, field)
+		if !ok || val == nil {
+			continue
+		}
+		switch v := val.(type) {
+		case string:
+			m.testVars[as] = v
+		case float64:
+			m.testVars[as] = fmt.Sprintf("%g", v)
+		default:
+			b, err := json.Marshal(v)
+			if err == nil {
+				m.testVars[as] = string(b)
+			}
+		}
+	}
+}
+
 // handleRunNextTest executes the next test in the queue.
 func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 	if len(m.pendingTests) == 0 {
 		m.addMessage("")
 
-		// Only add FunctionResponse if this was from a Claude tool_use (has ID)
-		// If tests were triggered by UI (user selected tests), don't send FunctionResponse
 		hadToolID := m.currentTestToolID != ""
 		completedCount := m.testGroupCompletedCount
 
@@ -140,19 +184,16 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 		m.testGroupResults = nil
 		m.currentTestToolName = ""
 		m.currentTestToolID = ""
+		m.testVars = nil
 		m.agentState = StateProcessing
 		m.updateViewport()
 
 		if hadToolID {
-			// Tests were triggered by Claude tool_use - FunctionResponse was added to history
-			// MUST send it to backend now! tool_result must be the next message after tool_use
 			return m, m.sendChatMessage("")
-		} else {
-			// Tests were triggered by UI - send summary message to Claude
-			summary := fmt.Sprintf("Tests completed. %d tests executed. Would you like me to analyze the results or run more tests?",
-				completedCount)
-			return m, m.sendChatMessage(summary)
 		}
+		summary := fmt.Sprintf("Tests completed. %d tests executed. Would you like me to analyze the results or run more tests?",
+			completedCount)
+		return m, m.sendChatMessage(summary)
 	}
 
 	testMap := m.pendingTests[0]
@@ -160,6 +201,11 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 
 	method, _ := testMap["method"].(string)
 	endpoint, _ := testMap["endpoint"].(string)
+
+	if m.testVars != nil {
+		endpoint = m.applyVars(endpoint)
+	}
+
 	requiresAuth := false
 	if ra, ok := testMap["requires_auth"].(bool); ok {
 		requiresAuth = ra
@@ -171,7 +217,6 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 	} else if es, ok := testMap["expected_status"].(int); ok {
 		expectedStatus = es
 	}
-
 	if expectedStatus == 0 {
 		expectedStatus = 200
 	}
@@ -187,7 +232,11 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 
 	var body any
 	if b, ok := testMap["body"]; ok {
-		body = b
+		if bs, ok := b.(string); ok && m.testVars != nil {
+			body = m.applyVars(bs)
+		} else {
+			body = b
+		}
 	}
 
 	result, err := m.testExecutor.ExecuteTest(method, endpoint, headers, body, requiresAuth)
@@ -216,9 +265,18 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 			"passed":          false,
 		})
 	} else {
+		if m.testVars != nil {
+			if extracts := toMapsSlice(testMap["extract"]); len(extracts) > 0 {
+				m.extractVars(result.ResponseBody, extracts)
+			}
+		}
+
 		passed := result.StatusCode == expectedStatus
 		schemaErrors := m.validateResponseSchema(method, endpoint, result.StatusCode, result.ResponseBody)
 		schemaValid := len(schemaErrors) == 0
+
+		assertionFailures := tester.RunAssertions(result.ResponseBody, toMapsSlice(testMap["assertions"]))
+		assertionsPassed := len(assertionFailures) == 0
 
 		statusIcon := "✓"
 		statusStyle := m.successStyle
@@ -228,7 +286,7 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 			if m.isHeadless {
 				m.headlessExitCode = 1
 			}
-		} else if !schemaValid {
+		} else if !schemaValid || !assertionsPassed {
 			statusIcon = "⚠"
 			statusStyle = lipgloss.NewStyle().Foreground(Theme.Warning)
 			if m.isHeadless {
@@ -253,21 +311,67 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		if !assertionsPassed {
+			warnStyle := lipgloss.NewStyle().Foreground(Theme.Warning)
+			m.addMessage(warnStyle.Render("    Assertion failures:"))
+			for _, af := range assertionFailures {
+				m.addMessage(warnStyle.Render("      · " + af))
+			}
+		}
+
 		m.testGroupResults = append(m.testGroupResults, map[string]any{
-			"method":          method,
-			"endpoint":        endpoint,
-			"status_code":     result.StatusCode,
-			"expected_status": expectedStatus,
-			"response_body":   result.ResponseBody,
-			"duration_ms":     result.Duration.Milliseconds(),
-			"requires_auth":   requiresAuth,
-			"passed":          passed,
-			"schema_valid":    schemaValid,
-			"schema_errors":   schemaErrors,
+			"method":             method,
+			"endpoint":           endpoint,
+			"status_code":        result.StatusCode,
+			"expected_status":    expectedStatus,
+			"response_body":      result.ResponseBody,
+			"duration_ms":        result.Duration.Milliseconds(),
+			"requires_auth":      requiresAuth,
+			"passed":             passed,
+			"schema_valid":       schemaValid,
+			"schema_errors":      schemaErrors,
+			"assertions_passed":  assertionsPassed,
+			"assertion_failures": assertionFailures,
 		})
 	}
 	m.testGroupCompletedCount++
 	m.updateViewport()
 
 	return m, runNextTest()
+}
+
+func extractsToAny(extracts []agent.Extract) []any {
+	if len(extracts) == 0 {
+		return nil
+	}
+	out := make([]any, len(extracts))
+	for i, e := range extracts {
+		out[i] = map[string]any{"field": e.Field, "as": e.As}
+	}
+	return out
+}
+
+func assertionsToAny(assertions []agent.Assertion) []any {
+	if len(assertions) == 0 {
+		return nil
+	}
+	out := make([]any, len(assertions))
+	for i, a := range assertions {
+		out[i] = map[string]any{"field": a.Field, "op": a.Op, "value": a.Value}
+	}
+	return out
+}
+
+func toMapsSlice(v any) []map[string]any {
+	raw, ok := v.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]any, 0, len(raw))
+	for _, item := range raw {
+		if m, ok := item.(map[string]any); ok {
+			out = append(out, m)
+		}
+	}
+	return out
 }

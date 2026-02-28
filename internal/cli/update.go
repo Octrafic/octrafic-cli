@@ -1257,11 +1257,14 @@ func handleTestPlanState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		tests := make([]map[string]any, 0)
 		for _, test := range selectedTests {
 			tests = append(tests, map[string]any{
-				"method":        test.Method,
-				"endpoint":      test.Endpoint,
-				"headers":       test.BackendTest.Headers,
-				"body":          test.BackendTest.Body,
-				"requires_auth": test.BackendTest.RequiresAuth,
+				"method":          test.Method,
+				"endpoint":        test.Endpoint,
+				"headers":         test.BackendTest.Headers,
+				"body":            test.BackendTest.Body,
+				"requires_auth":   test.BackendTest.RequiresAuth,
+				"expected_status": test.BackendTest.ExpectedStatus,
+				"extract":         extractsToAny(test.BackendTest.Extract),
+				"assertions":      assertionsToAny(test.BackendTest.Assertions),
 			})
 		}
 
@@ -1612,6 +1615,22 @@ func handleShowTestSelection(m *TestUIModel, msg showTestSelectionMsg) (tea.Mode
 			headers = h
 		}
 
+		var extractList []agent.Extract
+		for _, e := range toMapsSlice(testMap["extract"]) {
+			field, _ := e["field"].(string)
+			as, _ := e["as"].(string)
+			if field != "" && as != "" {
+				extractList = append(extractList, agent.Extract{Field: field, As: as})
+			}
+		}
+		var assertionList []agent.Assertion
+		for _, a := range toMapsSlice(testMap["assertions"]) {
+			field, _ := a["field"].(string)
+			op, _ := a["op"].(string)
+			if field != "" && op != "" {
+				assertionList = append(assertionList, agent.Assertion{Field: field, Op: op, Value: a["value"]})
+			}
+		}
 		testCase := &agent.TestCase{
 			Method:         method,
 			Endpoint:       endpoint,
@@ -1619,6 +1638,8 @@ func handleShowTestSelection(m *TestUIModel, msg showTestSelectionMsg) (tea.Mode
 			Body:           testMap["body"],
 			RequiresAuth:   requiresAuth,
 			ExpectedStatus: expectedStatus,
+			Extract:        extractList,
+			Assertions:     assertionList,
 		}
 
 		m.tests = append(m.tests, Test{
@@ -1654,6 +1675,8 @@ func handleShowTestSelection(m *TestUIModel, msg showTestSelectionMsg) (tea.Mode
 				"body":            test.BackendTest.Body,
 				"requires_auth":   test.BackendTest.RequiresAuth,
 				"expected_status": test.BackendTest.ExpectedStatus,
+				"extract":         extractsToAny(test.BackendTest.Extract),
+				"assertions":      assertionsToAny(test.BackendTest.Assertions),
 			})
 		}
 
