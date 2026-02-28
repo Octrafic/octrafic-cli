@@ -129,7 +129,32 @@ func getMainAgentTools() []common.Tool {
 								},
 								"expected_status": map[string]any{
 									"type":        "integer",
-									"description": "Expected HTTP status code. Defaults to 200 if not set. Set this correctly: 201 for POST that creates resources, 204 for DELETE, 400 for bad requests, 401 for unauthorized, 404 for not found, etc.",
+									"description": "Expected HTTP status code. Set correctly: 201 for POST creating resources, 204 for DELETE, 400 for bad input, 401 for unauthorized, 404 for not found.",
+								},
+								"extract": map[string]any{
+									"type":        []any{"array", "null"},
+									"description": "Extract values from response body for use in later tests. Each item: {\"field\": \"id\", \"as\": \"user_id\"}. Use dot notation for nested fields: \"data.token\", \"items.0.id\".",
+									"items": map[string]any{
+										"type": "object",
+										"properties": map[string]any{
+											"field": map[string]any{"type": "string", "description": "Dot-path to field in response JSON"},
+											"as":    map[string]any{"type": "string", "description": "Variable name to store value as"},
+										},
+										"required": []string{"field", "as"},
+									},
+								},
+								"assertions": map[string]any{
+									"type":        []any{"array", "null"},
+									"description": "Assert specific values in the response body. Each item: {\"field\": \"name\", \"op\": \"eq\", \"value\": \"Alice\"}. Operators: eq, neq, exists, not_exists, contains, gt, gte, lt, lte.",
+									"items": map[string]any{
+										"type": "object",
+										"properties": map[string]any{
+											"field": map[string]any{"type": "string", "description": "Dot-path to field in response JSON"},
+											"op":    map[string]any{"type": "string", "description": "Operator: eq, neq, exists, not_exists, contains, gt, gte, lt, lte"},
+											"value": map[string]any{"description": "Expected value (omit for exists/not_exists)"},
+										},
+										"required": []string{"field", "op"},
+									},
 								},
 							},
 							"required": []string{"method", "endpoint", "headers", "body", "requires_auth", "expected_status"},
@@ -258,11 +283,26 @@ Parameters:
 
 ## ExecuteTestGroup
 Execute a group of tests against the API. Call AFTER GenerateTestPlan.
-Response includes per test: status_code, response_body, duration_ms, passed, schema_valid, schema_errors.
+Response includes per test: status_code, response_body, duration_ms, passed, schema_valid, schema_errors, assertions_passed, assertion_failures.
 - passed=false → status code did not match expected
 - schema_valid=false → response body does not match the OpenAPI schema (even if passed=true)
-- Always report schema_errors to the user when schema_valid=false
-- CRITICAL: expected_status is ABSOLUTELY REQUIRED — always set it based on what the test expects: 200 for GET, 201 for POST that creates, 204 for DELETE, 400 for bad input, 401 for unauthorized, 404 for not found. Never omit this field or default to 200 if testing an error condition.
+- assertions_passed=false → one or more assertions failed
+- Always report schema_errors and assertion_failures to the user
+- expected_status is REQUIRED — set correctly: 200 GET, 201 POST create, 204 DELETE, 400 bad input, 401 unauthorized, 404 not found
+
+### Chaining tests with extract
+Use extract to capture values from a response and reuse them in later tests via {{var_name}}:
+{"method":"POST","endpoint":"/users","body":"{\"name\":\"Alice\"}","expected_status":201,"extract":[{"field":"id","as":"user_id"}],...}
+{"method":"GET","endpoint":"/users/{{user_id}}","expected_status":200,...}
+{"method":"DELETE","endpoint":"/users/{{user_id}}","expected_status":204,...}
+
+### Asserting response values
+Use assertions to verify specific fields in the response body:
+{"field":"name","op":"eq","value":"Alice"} — exact match
+{"field":"id","op":"exists"} — field must be present
+{"field":"age","op":"gte","value":18} — numeric comparison
+{"field":"token","op":"contains","value":"Bearer"} — substring
+Operators: eq, neq, exists, not_exists, contains, gt, gte, lt, lte
 
 ## wait
 Wait N seconds before proceeding. Use when:

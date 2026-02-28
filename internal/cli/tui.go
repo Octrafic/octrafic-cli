@@ -195,6 +195,7 @@ type TestUIModel struct {
 	testGroupResults        []map[string]any // Results from current test group for FunctionResponse
 	currentTestToolName     string           // Name of the tool being executed (e.g., "ExecuteTestGroup")
 	currentTestToolID       string           // ID of the tool_use for FunctionResponse
+	testVars                map[string]string
 
 	// Version
 	currentVersion string

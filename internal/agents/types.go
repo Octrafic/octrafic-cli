@@ -16,6 +16,17 @@ type TestPlan struct {
 	Tests []TestCase `json:"tests"`
 }
 
+type Extract struct {
+	Field string `json:"field"`
+	As    string `json:"as"`
+}
+
+type Assertion struct {
+	Field string `json:"field"`
+	Op    string `json:"op"`
+	Value any    `json:"value,omitempty"`
+}
+
 type TestCase struct {
 	ID             int               `json:"id"`
 	Description    string            `json:"description"`
@@ -26,6 +37,8 @@ type TestCase struct {
 	ExpectedStatus int               `json:"expected_status"`
 	Reasoning      string            `json:"reasoning"`
 	RequiresAuth   bool              `json:"requires_auth"`
+	Extract        []Extract         `json:"extract,omitempty"`
+	Assertions     []Assertion       `json:"assertions,omitempty"`
 }
 
 // BuildTestPlanPrompt generates tests based on detailed endpoint description
