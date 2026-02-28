@@ -324,9 +324,10 @@ func NewTestUIModel(baseURL string, specPath string, analysis *analyzer.Analysis
 		if cfg.LatestVersion != "" && updater.IsNewer(cfg.LatestVersion, version) {
 			model.latestVersion = cfg.LatestVersion
 		}
-		if cfg.Model != "" {
-			model.modelName = cfg.Model
-		}
+	}
+	_, _, _, activeModel := config.GetActiveLLMConfig()
+	if activeModel != "" {
+		model.modelName = activeModel
 	}
 
 	// Add header (logo + info)
