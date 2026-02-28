@@ -253,8 +253,11 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if err != nil {
-		m.addMessage(fmt.Sprintf("  ✗ %s %s%s", methodFormatted, endpoint, authIndicator))
-		m.addMessage(m.subtleStyle.Render(fmt.Sprintf("    Error: %s", err.Error())))
+		m.addMessage(fmt.Sprintf("  %s %s %s%s", m.errorStyle.Render("✗"), methodFormatted, endpoint, authIndicator))
+		m.addMessage(m.subtleStyle.Render(fmt.Sprintf("    Error: %s", friendlyError(err))))
+		if m.isHeadless {
+			m.headlessExitCode = 1
+		}
 
 		m.testGroupResults = append(m.testGroupResults, map[string]any{
 			"method":          method,
