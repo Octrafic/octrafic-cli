@@ -265,10 +265,8 @@ func handleRunNextTest(m *TestUIModel, _ runNextTestMsg) (tea.Model, tea.Cmd) {
 			"passed":          false,
 		})
 	} else {
-		if m.testVars != nil {
-			if extracts := toMapsSlice(testMap["extract"]); len(extracts) > 0 {
-				m.extractVars(result.ResponseBody, extracts)
-			}
+		if extracts := toMapsSlice(testMap["extract"]); len(extracts) > 0 {
+			m.extractVars(result.ResponseBody, extracts)
 		}
 
 		passed := result.StatusCode == expectedStatus

@@ -74,7 +74,9 @@ func (e *Executor) ExecuteTest(method, endpoint string, headers map[string]strin
 		return &TestResult{Error: fmt.Errorf("failed to create request: %w", err)}, err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	if reqBody != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
