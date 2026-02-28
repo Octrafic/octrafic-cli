@@ -23,15 +23,15 @@ type Specification struct {
 }
 
 type Endpoint struct {
-	Method          string                     `json:"method"`
-	Path            string                     `json:"path"`
-	Description     string                     `json:"description"`
-	Parameters      []Parameter                `json:"parameters,omitempty"`
-	RequestBody     string                     `json:"request_body,omitempty"`
-	Responses       map[string]string          `json:"responses,omitempty"`
-	ResponseSchemas map[string]map[string]any  `json:"response_schemas,omitempty"`
-	RequiresAuth    bool                       `json:"requires_auth"`
-	AuthType        string                     `json:"auth_type"` // "bearer", "basic", "apikey", "none"
+	Method          string                    `json:"method"`
+	Path            string                    `json:"path"`
+	Description     string                    `json:"description"`
+	Parameters      []Parameter               `json:"parameters,omitempty"`
+	RequestBody     string                    `json:"request_body,omitempty"`
+	Responses       map[string]string         `json:"responses,omitempty"`
+	ResponseSchemas map[string]map[string]any `json:"response_schemas,omitempty"`
+	RequiresAuth    bool                      `json:"requires_auth"`
+	AuthType        string                    `json:"auth_type"` // "bearer", "basic", "apikey", "none"
 }
 
 type Parameter struct {

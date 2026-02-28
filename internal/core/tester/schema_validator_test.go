@@ -6,7 +6,7 @@ import (
 
 func TestValidateSchema_Valid(t *testing.T) {
 	schema := map[string]any{
-		"type": "object",
+		"type":     "object",
 		"required": []any{"id", "email"},
 		"properties": map[string]any{
 			"id":    map[string]any{"type": "string"},
