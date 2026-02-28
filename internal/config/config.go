@@ -135,7 +135,13 @@ func GetActiveLLMConfig() (provider, apiKey, baseURL, modelName string) {
 	}
 
 	if provider == "" {
-		provider = "claude"
+		if strings.HasPrefix(modelName, "gpt-") || strings.HasPrefix(modelName, "o1") || strings.HasPrefix(modelName, "o3") {
+			provider = "openai"
+		} else if strings.HasPrefix(modelName, "gemini-") {
+			provider = "gemini"
+		} else {
+			provider = "claude"
+		}
 	}
 
 	return provider, apiKey, baseURL, modelName
