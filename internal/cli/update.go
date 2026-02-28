@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Octrafic/octrafic-cli/internal/agents"
+	agent "github.com/Octrafic/octrafic-cli/internal/agents"
 	"github.com/Octrafic/octrafic-cli/internal/config"
 	"github.com/Octrafic/octrafic-cli/internal/core/analyzer"
 	"github.com/Octrafic/octrafic-cli/internal/core/auth"
@@ -1600,17 +1600,25 @@ func handleShowTestSelection(m *TestUIModel, msg showTestSelectionMsg) (tea.Mode
 			requiresAuth = ra
 		}
 
+		expectedStatus := 0
+		if es, ok := testMap["expected_status"].(float64); ok {
+			expectedStatus = int(es)
+		} else if es, ok := testMap["expected_status"].(int); ok {
+			expectedStatus = es
+		}
+
 		headers := make(map[string]string)
 		if h, ok := testMap["headers"].(map[string]string); ok {
 			headers = h
 		}
 
 		testCase := &agent.TestCase{
-			Method:       method,
-			Endpoint:     endpoint,
-			Headers:      headers,
-			Body:         testMap["body"],
-			RequiresAuth: requiresAuth,
+			Method:         method,
+			Endpoint:       endpoint,
+			Headers:        headers,
+			Body:           testMap["body"],
+			RequiresAuth:   requiresAuth,
+			ExpectedStatus: expectedStatus,
 		}
 
 		m.tests = append(m.tests, Test{
@@ -1640,11 +1648,12 @@ func handleShowTestSelection(m *TestUIModel, msg showTestSelectionMsg) (tea.Mode
 		tests := make([]map[string]any, 0)
 		for _, test := range m.tests {
 			tests = append(tests, map[string]any{
-				"method":        test.Method,
-				"endpoint":      test.Endpoint,
-				"headers":       test.BackendTest.Headers,
-				"body":          test.BackendTest.Body,
-				"requires_auth": test.BackendTest.RequiresAuth,
+				"method":          test.Method,
+				"endpoint":        test.Endpoint,
+				"headers":         test.BackendTest.Headers,
+				"body":            test.BackendTest.Body,
+				"requires_auth":   test.BackendTest.RequiresAuth,
+				"expected_status": test.BackendTest.ExpectedStatus,
 			})
 		}
 

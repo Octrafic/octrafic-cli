@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+
 	"github.com/Octrafic/octrafic-cli/internal/llm/common"
 )
 
@@ -261,7 +262,7 @@ Response includes per test: status_code, response_body, duration_ms, passed, sch
 - passed=false → status code did not match expected
 - schema_valid=false → response body does not match the OpenAPI schema (even if passed=true)
 - Always report schema_errors to the user when schema_valid=false
-- expected_status is REQUIRED — always set it based on what the test expects: 200 for GET, 201 for POST that creates, 204 for DELETE, 400 for bad input, 401 for unauthorized, 404 for not found. Never leave it as 200 when testing error cases.
+- CRITICAL: expected_status is ABSOLUTELY REQUIRED — always set it based on what the test expects: 200 for GET, 201 for POST that creates, 204 for DELETE, 400 for bad input, 401 for unauthorized, 404 for not found. Never omit this field or default to 200 if testing an error condition.
 
 ## wait
 Wait N seconds before proceeding. Use when:
