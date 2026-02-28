@@ -87,6 +87,27 @@ func (m *TestUIModel) recreateHeader() tea.Cmd {
 	return nil
 }
 
+// friendlyError returns a short, human-readable version of common HTTP errors.
+func friendlyError(err error) string {
+	msg := err.Error()
+	if strings.Contains(msg, "connection refused") {
+		return "connection refused"
+	}
+	if strings.Contains(msg, "no such host") {
+		return "host not found"
+	}
+	if strings.Contains(msg, "i/o timeout") || strings.Contains(msg, "context deadline exceeded") {
+		return "request timed out"
+	}
+	if strings.Contains(msg, "certificate") || strings.Contains(msg, "x509") {
+		return "TLS/certificate error"
+	}
+	if strings.Contains(msg, "EOF") {
+		return "connection closed unexpectedly"
+	}
+	return msg
+}
+
 func (m *TestUIModel) shouldAskForConfirmation(toolName string) bool {
 	// Tools that are safe and don't need confirmation
 	// ExecuteTestGroup is safe - user already approved the plan via checkboxes
@@ -336,8 +357,6 @@ func (m *TestUIModel) loadConversationHistory() error {
 					displayName = "Executing tests"
 				case agent.ToolGenerateReport:
 					displayName = "Generating PDF report"
-				case agent.ToolExecuteTest:
-					displayName = "Executing test"
 				default:
 					displayName = fmt.Sprintf("Tool: %s", toolName)
 				}

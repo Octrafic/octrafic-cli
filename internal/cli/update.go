@@ -1442,13 +1442,6 @@ func handleCommandsState(m *TestUIModel, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
-// showToolWidget displays a tool execution widget with title and details.
-// Deprecated: use m.showToolMessage() instead.
-func showToolWidget(m *TestUIModel, title string, details string) {
-	m.showToolMessage(title, details)
-	m.updateViewport()
-}
-
 // handleProcessToolCalls executes tool calls received from the agent.
 func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, tea.Cmd) {
 	if len(m.streamedToolCalls) > 0 {
@@ -1471,7 +1464,8 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 					}
 				}
 				details := strings.Join(endpointsList, ", ")
-				showToolWidget(m, "Getting endpoint details", details)
+				m.showToolMessage("Getting endpoint details", details)
+				m.updateViewport()
 			}
 
 			return m, m.executeTool(toolCall)
@@ -1532,7 +1526,8 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 			formatCount := len(exportsArg)
 			label := fmt.Sprintf("%d format(s)", formatCount)
 
-			showToolWidget(m, "Exporting tests", label)
+			m.showToolMessage("Exporting tests", label)
+			m.updateViewport()
 			m.agentState = StateUsingTool
 			m.animationFrame = 0
 			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
@@ -1542,7 +1537,8 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 			m.currentTestToolID = toolCall.ID
 			m.currentTestToolName = agent.ToolGenerateReport
 
-			showToolWidget(m, "Generating PDF report", "")
+			m.showToolMessage("Generating PDF report", "")
+			m.updateViewport()
 			m.agentState = StateUsingTool
 			m.animationFrame = 0
 			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Primary)
@@ -1563,7 +1559,8 @@ func handleProcessToolCalls(m *TestUIModel, _ processToolCallsMsg) (tea.Model, t
 				label = fmt.Sprintf("%ds delay — %s", seconds, reason)
 			}
 
-			showToolWidget(m, "Waiting", label)
+			m.showToolMessage("Waiting", label)
+			m.updateViewport()
 			m.agentState = StateUsingTool
 			m.animationFrame = 0
 			m.spinner.Style = lipgloss.NewStyle().Foreground(Theme.Warning)
